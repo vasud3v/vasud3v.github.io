@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, X, Home, MessageSquare, Users, HelpCircle, LogIn, LogOut, Shield, BarChart3 } from 'lucide-react';
+import { Search, Menu, X, Home, MessageSquare, Users, HelpCircle, LogIn, LogOut, Shield, BarChart3, Bookmark, Bell } from 'lucide-react';
 import CloveLogo from '@/components/forum/CloveLogo';
 import NotificationCenter from '@/components/forum/NotificationCenter';
 import RoleBadge from '@/components/forum/RoleBadge';
@@ -37,9 +37,14 @@ export default function ForumHeader({
     { label: "What's New", icon: MessageSquare, active: location.pathname === '/whats-new', href: '/whats-new' },
     { label: 'Members', icon: Users, active: location.pathname === '/members', href: '/members' },
     { label: 'Rules', icon: HelpCircle, active: location.pathname === '/rules', href: '/rules' },
-    { label: 'Search', icon: Search, active: location.pathname === '/search', href: '/search' },
-    { label: 'Analytics', icon: BarChart3, active: location.pathname === '/analytics', href: '/analytics' },
-    ...(isStaff ? [{ label: 'Admin', icon: Shield, active: location.pathname === '/admin', href: '/admin' }] : []),
+    ...(isAuthenticated ? [
+      { label: 'Watched', icon: Bell, active: location.pathname === '/watched', href: '/watched' },
+      { label: 'Bookmarks', icon: Bookmark, active: location.pathname === '/bookmarks', href: '/bookmarks' }
+    ] : []),
+    ...(isStaff ? [
+      { label: 'Analytics', icon: BarChart3, active: location.pathname === '/analytics', href: '/analytics' },
+      { label: 'Admin', icon: Shield, active: location.pathname === '/admin', href: '/admin' }
+    ] : []),
   ];
 
   return (

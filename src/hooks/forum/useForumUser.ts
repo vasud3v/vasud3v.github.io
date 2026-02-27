@@ -97,34 +97,36 @@ export function useForumUser() {
         return fallbackUser;
     }, [isAuthenticated, authUser, forumUser]);
 
-    // Load profile customizations from Supabase on mount
+    // Load profile customizations from Supabase on mount (optimized - only load current user)
     useEffect(() => {
+        if (!isAuthenticated || !authUser?.id) return;
+
         (async () => {
             try {
                 const { data, error } = await supabase
                     .from('profile_customizations')
-                    .select('user_id, custom_avatar, custom_banner');
+                    .select('user_id, custom_avatar, custom_banner')
+                    .eq('user_id', authUser.id)
+                    .maybeSingle();
 
                 if (error) {
                     console.warn('Failed to load profile customizations from Supabase:', error.message);
                     return;
                 }
 
-                if (data && data.length > 0) {
-                    const supabaseCustomizations: Record<string, { avatar?: string; banner?: string }> = {};
-                    for (const row of data) {
-                        supabaseCustomizations[row.user_id] = {
-                            ...(row.custom_avatar ? { avatar: row.custom_avatar } : {}),
-                            ...(row.custom_banner ? { banner: row.custom_banner } : {}),
-                        };
-                    }
-                    setProfileCustomizations((prev) => ({ ...prev, ...supabaseCustomizations }));
+                if (data) {
+                    setProfileCustomizations({
+                        [data.user_id]: {
+                            ...(data.custom_avatar ? { avatar: data.custom_avatar } : {}),
+                            ...(data.custom_banner ? { banner: data.custom_banner } : {}),
+                        },
+                    });
                 }
             } catch (err) {
                 console.warn('Error loading profile customizations from Supabase:', err);
             }
         })();
-    }, []);
+    }, [isAuthenticated, authUser?.id]);
 
     // Load current user's page size preference
     useEffect(() => {

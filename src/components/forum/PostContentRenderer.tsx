@@ -1,346 +1,372 @@
-import { useState } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 import { EmbedRenderer } from './EmbedRenderer';
 import { parseEmbeddableUrl, isStandaloneUrl } from '@/lib/embed-parser';
-import {
-  Code, EyeOff, ShieldCheck, Check, X, TrendingUp, Flag, Heart, Smile,
-  MessageCircle, Pencil, Flame, Pin, CheckCircle2, Lock, ArrowUp, ChevronDown, Eye, Award
-} from 'lucide-react';
+import { Code, EyeOff, Copy, Check } from 'lucide-react';
 
 interface PostContentRendererProps {
   content: string;
 }
 
-export default function PostContentRenderer({ content }: PostContentRendererProps) {
-  const [expandedSpoilers, setExpandedSpoilers] = useState<Set<number>>(new Set());
+// Splits content into segments: plain text, spoiler blocks, and standalone embed URLs.
+// This pre-processing is needed because [spoiler] tags and auto-embeds are custom
+// syntax that react-markdown doesn't handle natively.
+interface Segment {
+  type: 'markdown' | 'spoiler' | 'embed';
+  content: string;
+}
 
-  const toggleSpoiler = (spoilerIdx: number) => {
-    setExpandedSpoilers(prev => {
-      const next = new Set(prev);
-      if (next.has(spoilerIdx)) next.delete(spoilerIdx);
-      else next.add(spoilerIdx);
-      return next;
-    });
+function parseSegments(content: string): Segment[] {
+  const segments: Segment[] = [];
+  // Split on spoiler tags first
+  const spoilerRegex = /\[spoiler\]([\s\S]*?)\[\/spoiler\]/gi;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = spoilerRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: 'markdown', content: content.slice(lastIndex, match.index) });
+    }
+    segments.push({ type: 'spoiler', content: match[1] });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < content.length) {
+    segments.push({ type: 'markdown', content: content.slice(lastIndex) });
+  }
+
+  // Now split markdown segments further to extract standalone embed URLs
+  const expanded: Segment[] = [];
+  for (const seg of segments) {
+    if (seg.type !== 'markdown') {
+      expanded.push(seg);
+      continue;
+    }
+
+    const lines = seg.content.split('\n');
+    let mdBuffer: string[] = [];
+
+    const flushBuffer = () => {
+      if (mdBuffer.length > 0) {
+        expanded.push({ type: 'markdown', content: mdBuffer.join('\n') });
+        mdBuffer = [];
+      }
+    };
+
+    for (const line of lines) {
+      if (isStandaloneUrl(line)) {
+        const embedData = parseEmbeddableUrl(line.trim());
+        if (embedData && embedData.type !== 'link') {
+          flushBuffer();
+          expanded.push({ type: 'embed', content: line.trim() });
+          continue;
+        }
+      }
+      mdBuffer.push(line);
+    }
+    flushBuffer();
+  }
+
+  return expanded;
+}
+
+// Code block wrapper with language label and copy button
+function CodeBlock({ children, className }: { children: ReactNode; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  const lang = className?.replace('language-', '') || '';
+
+  const handleCopy = async () => {
+    const text = extractText(children);
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for older browsers or non-HTTPS
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+      // Still show copied state even if it failed
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
-  let spoilerCounter = 0;
-
   return (
-    <div className="text-[13px] font-mono text-forum-text/90 leading-relaxed whitespace-pre-wrap flex-1 break-words">
-      {content.split('```').map((part, i) => {
-        if (i % 2 === 1) {
-          const lines = part.split('\n');
-          const lang = lines[0];
-          const code = lines.slice(1).join('\n');
-          return (
-            <div
-              key={i}
-              className="my-3 rounded-md border border-forum-border/40 overflow-hidden"
-            >
-              <div className="flex items-center justify-between px-3 py-1.5 bg-forum-bg border-b border-forum-border/30">
-                <span className="text-[8px] font-mono uppercase tracking-wider text-forum-muted">
-                  {lang || 'code'}
-                </span>
-                <Code size={10} className="text-forum-muted/50" />
-              </div>
-              <pre className="px-3 py-3 bg-forum-bg/80 overflow-x-auto">
-                <code className="text-[11px] font-mono text-forum-pink/80">
-                  {code}
-                </code>
-              </pre>
-            </div>
-          );
-        }
-
-        // Process line by line to detect standalone URLs for embedding
-        const lines = part.split('\n');
-        const processedLines: JSX.Element[] = [];
-
-        for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-          const line = lines[lineIdx];
-
-          // Check if this line is a standalone URL
-          if (isStandaloneUrl(line)) {
-            const embedData = parseEmbeddableUrl(line.trim());
-            if (embedData && embedData.type !== 'link') {
-              processedLines.push(
-                <div key={`embed-${i}-${lineIdx}`}>
-                  <EmbedRenderer embed={embedData} />
-                </div>
-              );
-              continue;
-            }
-          }
-
-          // Otherwise process the line normally
-          processedLines.push(
-            <span key={`line-${i}-${lineIdx}`}>
-              {lineIdx > 0 && '\n'}
-              {processLine(line, spoilerCounter, expandedSpoilers, toggleSpoiler)}
-            </span>
-          );
-        }
-
-        return <span key={i}>{processedLines}</span>;
-      })}
+    <div className="my-3 rounded-md border border-forum-border/40 overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-forum-bg border-b border-forum-border/30">
+        <span className="text-[8px] font-mono uppercase tracking-wider text-forum-muted">
+          {lang || 'code'}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1 text-forum-muted/50 hover:text-forum-pink transition-forum text-[9px] font-mono"
+          >
+            {copied ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+          <Code size={10} className="text-forum-muted/50" />
+        </div>
+      </div>
+      <pre className="px-3 py-3 bg-forum-bg/80 overflow-x-auto !m-0 !rounded-none">
+        <code className={`text-[11px] font-mono ${className || ''}`}>
+          {children}
+        </code>
+      </pre>
     </div>
   );
 }
 
-// Helper function to process a single line
-function processInlineFormatting(text: string): (string | JSX.Element)[] {
-  const parts: (string | JSX.Element)[] = [];
-  // Match bold (**text**), italic (*text*), inline code (`text`), and links [text](url)
-  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
-  let lastIndex = 0;
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.substring(lastIndex, match.index));
-    }
-    if (match[2]) {
-      // Bold
-      parts.push(<strong key={`b-${match.index}`} className="font-bold text-forum-text">{match[2]}</strong>);
-    } else if (match[3]) {
-      // Italic
-      parts.push(<em key={`i-${match.index}`} className="italic text-forum-text/80">{match[3]}</em>);
-    } else if (match[4]) {
-      // Inline code
-      parts.push(<code key={`c-${match.index}`} className="px-1 py-0.5 rounded bg-forum-bg border border-forum-border/30 text-forum-pink/80 text-[11px]">{match[4]}</code>);
-    } else if (match[5] && match[6]) {
-      // Link
-      parts.push(<a key={`l-${match.index}`} href={match[6]} target="_blank" rel="noopener noreferrer" className="text-forum-pink hover:underline">{match[5]}</a>);
-    }
-    lastIndex = match.index + match[0].length;
+function extractText(node: ReactNode): string {
+  if (typeof node === 'string') return node;
+  if (Array.isArray(node)) return node.map(extractText).join('');
+  if (node && typeof node === 'object' && 'props' in node) {
+    return extractText((node as any).props.children);
   }
-
-  if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex));
-  }
-
-  return parts.length > 0 ? parts : [text];
+  return '';
 }
 
-function processLine(line: string, spoilerCounter: number, expandedSpoilers: Set<number>, toggleSpoiler: (idx: number) => void) {
-  // Check for headings (# ## ### ####)
-  const headingMatch = line.match(/^(#{1,4})\s+(.+)$/);
-  if (headingMatch) {
-    const level = headingMatch[1].length;
-    const text = headingMatch[2];
-    const sizes = ['text-[18px]', 'text-[16px]', 'text-[14px]', 'text-[13px]'];
-    return (
-      <div className={`${sizes[level - 1]} font-mono font-bold text-forum-text my-2`}>
-        {text}
-      </div>
-    );
-  }
+// Spoiler block component
+function SpoilerBlock({ content }: { content: string }) {
+  const [expanded, setExpanded] = useState(false);
 
-  // Check for bullet points (- or *)
-  const bulletMatch = line.match(/^[\s]*[-*]\s+(.+)$/);
-  if (bulletMatch) {
-    return (
-      <div className="flex items-start gap-2 my-1">
-        <span className="text-forum-pink mt-1">•</span>
-        <span className="flex-1">{processInlineFormatting(bulletMatch[1])}</span>
-      </div>
-    );
-  }
+  return (
+    <span className="inline-block my-2">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="transition-forum flex items-center gap-1.5 text-[10px] font-mono font-semibold text-forum-pink/80 hover:text-forum-pink bg-forum-pink/[0.04] hover:bg-forum-pink/[0.08] border border-forum-pink/15 hover:border-forum-pink/30 rounded-md px-2.5 py-1.5"
+      >
+        <EyeOff size={10} />
+        {expanded ? 'Hide Spoiler' : 'Show Spoiler'}
+      </button>
+      {expanded && (
+        <div className="mt-1.5 px-3 py-2 bg-forum-bg/60 border border-forum-border/30 rounded-md text-forum-text/80 animate-in fade-in duration-200">
+          <MarkdownBlock content={content} />
+        </div>
+      )}
+    </span>
+  );
+}
 
-  return line.split(/(\[spoiler\][\s\S]*?\[\/spoiler\])/).map((segment, j) => {
-    // Handle spoiler tags
-    const spoilerMatch = segment.match(/^\[spoiler\]([\s\S]*?)\[\/spoiler\]$/);
-    if (spoilerMatch) {
-      const currentSpoilerIdx = spoilerCounter++;
-      const isExpanded = expandedSpoilers.has(currentSpoilerIdx);
+// Custom component overrides for react-markdown to match forum styling
+const markdownComponents: Components = {
+  // Headings
+  h1: ({ children }) => (
+    <div className="text-[18px] font-mono font-bold text-forum-text my-2">{children}</div>
+  ),
+  h2: ({ children }) => (
+    <div className="text-[16px] font-mono font-bold text-forum-text my-2">{children}</div>
+  ),
+  h3: ({ children }) => (
+    <div className="text-[14px] font-mono font-bold text-forum-text my-2">{children}</div>
+  ),
+  h4: ({ children }) => (
+    <div className="text-[13px] font-mono font-bold text-forum-text my-2">{children}</div>
+  ),
+  h5: ({ children }) => (
+    <div className="text-[12px] font-mono font-bold text-forum-text my-2">{children}</div>
+  ),
+  h6: ({ children }) => (
+    <div className="text-[11px] font-mono font-bold text-forum-text my-2">{children}</div>
+  ),
+
+  // Paragraphs
+  p: ({ children }) => (
+    <p className="my-1 leading-relaxed">{processMentions(children)}</p>
+  ),
+
+  // Bold / Italic
+  strong: ({ children }) => <strong className="font-bold text-forum-text">{children}</strong>,
+  em: ({ children }) => <em className="italic text-forum-text/80">{children}</em>,
+
+  // Strikethrough
+  del: ({ children }) => <del className="text-forum-muted/60">{children}</del>,
+
+  // Links
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-forum-pink hover:underline decoration-forum-pink/30 hover:decoration-forum-pink/60"
+    >
+      {children}
+    </a>
+  ),
+
+  // Images
+  img: ({ src, alt }) => (
+    <div className="my-2">
+      <img
+        src={src}
+        alt={alt || ''}
+        className="max-w-full max-h-[400px] rounded-md border border-forum-border/30 object-contain"
+        loading="lazy"
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+      />
+    </div>
+  ),
+
+  // Lists
+  ul: ({ children }) => <ul className="my-1 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="my-1 space-y-0.5 list-decimal list-inside">{children}</ol>,
+  li: ({ children }) => (
+    <li className="flex items-start gap-2 my-0.5">
+      <span className="text-forum-pink mt-1 shrink-0">&#8226;</span>
+      <span className="flex-1">{children}</span>
+    </li>
+  ),
+
+  // Inline code
+  code: ({ className, children }) => {
+    // If it has a language class, it's inside a <pre> - rehype-highlight handles this
+    if (className) {
+      return <code className={className}>{children}</code>;
+    }
+    // Inline code
+    return (
+      <code className="px-1.5 py-0.5 rounded bg-forum-bg border border-forum-border/30 text-[11px] text-forum-pink/90 font-mono">
+        {children}
+      </code>
+    );
+  },
+
+  // Code blocks (pre wraps code)
+  pre: ({ children }) => {
+    // Extract the code element's props
+    const codeChild = children as any;
+    const className = codeChild?.props?.className || '';
+    const codeContent = codeChild?.props?.children;
+    return <CodeBlock className={className}>{codeContent}</CodeBlock>;
+  },
+
+  // Blockquotes
+  blockquote: ({ children }) => (
+    <blockquote className="my-2 pl-3 border-l-2 border-forum-pink/40 text-forum-text/70 italic">
+      {children}
+    </blockquote>
+  ),
+
+  // Horizontal rules
+  hr: () => <hr className="my-4 border-forum-border/30" />,
+
+  // Tables
+  table: ({ children }) => (
+    <div className="my-3 overflow-x-auto rounded-md border border-forum-border/40">
+      <table className="w-full text-[11px] font-mono">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-forum-bg border-b border-forum-border/30">{children}</thead>,
+  th: ({ children }) => (
+    <th className="px-3 py-2 text-left font-bold text-forum-pink/80 uppercase tracking-wider text-[9px]">
+      {children}
+    </th>
+  ),
+  tr: ({ children }) => (
+    <tr className="border-b border-forum-border/15 last:border-b-0 hover:bg-forum-pink/[0.02] transition-forum">
+      {children}
+    </tr>
+  ),
+  td: ({ children }) => <td className="px-3 py-1.5 text-forum-text/80">{children}</td>,
+
+  // Task list items (GFM checkboxes)
+  input: ({ checked, type, ...props }) => {
+    if (type === 'checkbox') {
       return (
-        <span key={`spoiler-${j}`} className="inline-block my-2">
-          <button
-            onClick={() => toggleSpoiler(currentSpoilerIdx)}
-            className="transition-forum flex items-center gap-1.5 text-[10px] font-mono font-semibold text-forum-pink/80 hover:text-forum-pink bg-forum-pink/[0.04] hover:bg-forum-pink/[0.08] border border-forum-pink/15 hover:border-forum-pink/30 rounded-md px-2.5 py-1.5"
-          >
-            <EyeOff size={10} />
-            {isExpanded ? 'Hide Spoiler' : 'Show Spoiler'}
-          </button>
-          {isExpanded && (
-            <div className="mt-1.5 px-3 py-2 bg-forum-bg/60 border border-forum-border/30 rounded-md text-forum-text/80 animate-in fade-in duration-200">
-              {spoilerMatch[1]}
-            </div>
-          )}
+        <input
+          type="checkbox"
+          checked={checked}
+          readOnly
+          className="mr-1.5 accent-forum-pink rounded"
+          {...props}
+        />
+      );
+    }
+    return <input type={type} {...props} />;
+  },
+};
+
+// Highlight @mentions in text children
+function processMentions(children: ReactNode): ReactNode {
+  if (typeof children === 'string') {
+    return processMentionString(children);
+  }
+  if (Array.isArray(children)) {
+    return children.map((child, i) => {
+      if (typeof child === 'string') return <span key={i}>{processMentionString(child)}</span>;
+      return child;
+    });
+  }
+  return children;
+}
+
+function processMentionString(text: string): ReactNode {
+  const parts = text.split(/(@\w+)/g);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    if (part.startsWith('@')) {
+      return (
+        <span key={i} className="text-forum-pink font-semibold cursor-pointer hover:underline">
+          {part}
         </span>
       );
     }
-
-    // Check if this segment contains a markdown table
-    const tableRegex = /(\n?\|[^\n]+\|\n\|[-:| ]+\|\n(?:\|[^\n]+\|\n?)*)/;
-    const tableParts = segment.split(tableRegex);
-
-    return tableParts.map((tPart, tk) => {
-      // Render table if it matches
-      if (tPart.match(/^\n?\|.+\|\n\|[-:| ]+\|\n/)) {
-        const rows = tPart.trim().split('\n').filter(r => r.trim());
-        if (rows.length >= 2) {
-          const headerCells = rows[0].split('|').filter(c => c.trim());
-          const dataRows = rows.slice(2); // skip header + separator
-          return (
-            <div key={`table-${tk}`} className="my-3 overflow-x-auto rounded-md border border-forum-border/40">
-              <table className="w-full text-[11px] font-mono">
-                <thead>
-                  <tr className="bg-forum-bg border-b border-forum-border/30">
-                    {headerCells.map((cell, ci) => (
-                      <th key={ci} className="px-3 py-2 text-left font-bold text-forum-pink/80 uppercase tracking-wider text-[9px]">
-                        {cell.trim()}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {dataRows.map((row, ri) => {
-                    const cells = row.split('|').filter(c => c.trim());
-                    return (
-                      <tr key={ri} className="border-b border-forum-border/15 last:border-b-0 hover:bg-forum-pink/[0.02] transition-forum">
-                        {cells.map((cell, ci) => (
-                          <td key={ci} className="px-3 py-1.5 text-forum-text/80">
-                            {cell.trim()}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          );
-        }
-      }
-
-      // Process inline formatting: inline code, images, mentions, strikethrough, hashtags, bullets, icons
-      return tPart.split(/(!\[.*?\]\(.*?\))|(@\w+)|(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(~~[^~]+~~)|(^#{1,6}\s+.+$)|(^[-*]\s+.+$)|(\[[A-Z][a-zA-Z]+\])/m).map((seg, sj) => {
-        if (!seg) return null;
-
-        // Render inline images from markdown ![alt](url)
-        const imgMatch = seg.match(/^!\[(.*?)\]\((.*?)\)$/);
-        if (imgMatch) {
-          return (
-            <div key={`${tk}-${sj}`} className="my-2">
-              <img
-                src={imgMatch[2]}
-                alt={imgMatch[1]}
-                className="max-w-full max-h-[400px] rounded-md border border-forum-border/30 object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            </div>
-          );
-        }
-
-        // Hashtags (markdown headers)
-        const headerMatch = seg.match(/^(#{1,6})\s+(.+)$/);
-        if (headerMatch) {
-          const level = headerMatch[1].length;
-          const text = headerMatch[2];
-          const sizes = ['text-[16px]', 'text-[15px]', 'text-[14px]', 'text-[13px]', 'text-[12px]', 'text-[11px]'];
-          return (
-            <div key={`${tk}-${sj}`} className={`${sizes[level - 1]} font-bold text-forum-text my-2`}>
-              {text}
-            </div>
-          );
-        }
-
-        // Bullet points
-        const bulletMatch = seg.match(/^[-*]\s+(.+)$/);
-        if (bulletMatch) {
-          return (
-            <div key={`${tk}-${sj}`} className="flex items-start gap-2 my-1">
-              <span className="text-forum-pink mt-1">•</span>
-              <span>{bulletMatch[1]}</span>
-            </div>
-          );
-        }
-
-        // Mentions
-        if (seg.startsWith('@')) {
-          return (
-            <span
-              key={`${tk}-${sj}`}
-              className="text-forum-pink font-semibold cursor-pointer hover:underline"
-            >
-              {seg}
-            </span>
-          );
-        }
-
-        // Inline code
-        const inlineCodeMatch = seg.match(/^`([^`]+)`$/);
-        if (inlineCodeMatch) {
-          return (
-            <code
-              key={`${tk}-${sj}`}
-              className="px-1.5 py-0.5 rounded bg-forum-bg border border-forum-border/30 text-[11px] text-forum-pink/90 font-mono"
-            >
-              {inlineCodeMatch[1]}
-            </code>
-          );
-        }
-
-        // Bold
-        const boldMatch = seg.match(/^\*\*([^*]+)\*\*$/);
-        if (boldMatch) {
-          return <strong key={`${tk}-${sj}`} className="font-bold text-forum-text">{boldMatch[1]}</strong>;
-        }
-
-        // Italic
-        const italicMatch = seg.match(/^\*([^*]+)\*$/);
-        if (italicMatch) {
-          return <em key={`${tk}-${sj}`} className="italic">{italicMatch[1]}</em>;
-        }
-
-        // Strikethrough
-        const strikeMatch = seg.match(/^~~([^~]+)~~$/);
-        if (strikeMatch) {
-          return <del key={`${tk}-${sj}`} className="text-forum-muted/60">{strikeMatch[1]}</del>;
-        }
-
-        // Lucide Icons [IconName]
-        const iconMatch = seg.match(/^\[([A-Z][a-zA-Z]+)\]$/);
-        if (iconMatch) {
-          const iconName = iconMatch[1];
-          const iconMap: Record<string, any> = {
-            Shield: ShieldCheck,
-            Check,
-            X,
-            Rocket: TrendingUp,
-            Sparkles: TrendingUp,
-            Flag,
-            Heart,
-            Smile,
-            TrendingUp,
-            Lightbulb: MessageCircle,
-            FileEdit: Pencil,
-            Target: Flag,
-            Flame,
-            Pin,
-            CheckCircle: CheckCircle2,
-            Lock,
-            ArrowUp,
-            ArrowDown: ChevronDown,
-            Globe: Eye,
-            PartyPopper: Award,
-          };
-          const IconComponent = iconMap[iconName];
-          if (IconComponent) {
-            return (
-              <IconComponent
-                key={`${tk}-${sj}`}
-                size={14}
-                className="inline-block mx-0.5 text-forum-pink align-text-bottom"
-              />
-            );
-          }
-        }
-
-        return seg;
-      });
-    });
+    return part;
   });
+}
+
+// Renders a markdown string with react-markdown
+function MarkdownBlock({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeHighlight]}
+      components={markdownComponents}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+
+export default function PostContentRenderer({ content }: PostContentRendererProps) {
+  const segments = useMemo(() => parseSegments(content), [content]);
+
+  return (
+    <div className="text-[13px] font-mono text-forum-text/90 leading-relaxed flex-1 break-words post-content">
+      {segments.map((seg, i) => {
+        switch (seg.type) {
+          case 'spoiler':
+            return <SpoilerBlock key={i} content={seg.content} />;
+
+          case 'embed': {
+            const embedData = parseEmbeddableUrl(seg.content);
+            if (embedData && embedData.type !== 'link') {
+              return <EmbedRenderer key={i} embed={embedData} />;
+            }
+            return <MarkdownBlock key={i} content={seg.content} />;
+          }
+
+          case 'markdown':
+            return <MarkdownBlock key={i} content={seg.content} />;
+
+          default:
+            return null;
+        }
+      })}
+    </div>
+  );
 }

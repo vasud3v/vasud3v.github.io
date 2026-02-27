@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/forum/Toast';
 import { UserRole, ROLE_LABELS, ROLE_COLORS } from '@/types/forum';
 import RoleBadge from '@/components/forum/RoleBadge';
+import { useForumContext } from '@/context/ForumContext';
 
 interface AdminUser {
   id: string;
@@ -39,6 +40,7 @@ export default function AdminUsersTab({ users, currentUserId, currentUserRole, o
   const [banReason, setBanReason] = useState('');
   const [warnModal, setWarnModal] = useState<{ userId: string; username: string } | null>(null);
   const [warnReason, setWarnReason] = useState('');
+  const { getUserProfile } = useForumContext();
 
   const filtered = users.filter(u => {
     const matchesSearch = !searchQuery || u.username.toLowerCase().includes(searchQuery.toLowerCase());
@@ -154,7 +156,7 @@ export default function AdminUsersTab({ users, currentUserId, currentUserRole, o
         <div className="divide-y divide-forum-border/20 max-h-[600px] overflow-y-auto">
           {filtered.map(user => (
             <div key={user.id} className={`flex items-center gap-3 px-4 py-3 hover:bg-forum-hover/30 transition-forum ${user.isBanned ? 'opacity-60' : ''}`}>
-              <img src={user.avatar} alt={user.username} className="h-8 w-8 rounded-md border border-forum-border object-cover flex-shrink-0" />
+              <img src={getUserProfile(user.id).avatar || user.avatar} alt={user.username} className="h-8 w-8 rounded-md border border-forum-border object-cover flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-mono font-semibold text-forum-text cursor-pointer hover:text-forum-pink" onClick={() => navigate(`/user/${user.id}`)}>{user.username}</span>

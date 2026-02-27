@@ -3,9 +3,8 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Clock, Quote, History, Pencil, Bookmark, Flag, Share2,
-  ChevronUp, ChevronDown, Eye, MoreHorizontal, Check, X,
-  AlertTriangle, FileText, Trash2, Shield, ShieldCheck,
-  Sparkles, Code2, Crown, Star, Zap, Reply
+  ChevronUp, ChevronDown, Check, X,
+  AlertTriangle, Trash2, Zap, Reply
 } from 'lucide-react';
 import { PostData, useForumContext } from '@/context/ForumContext';
 import PostEditHistoryModal from './PostEditHistoryModal';
@@ -15,6 +14,8 @@ import RoleBadge from './RoleBadge';
 import PostContentRenderer from './PostContentRenderer';
 import { UserRole } from '@/types/forum';
 import ProfileHoverCard from './ProfileHoverCard';
+import { getRankColorCompact, getRankIconCompact, getReputationColor, formatReputation, getVoteScoreColor, formatVoteScore } from '@/lib/forumUtils';
+import { REPORT_REASONS } from '@/lib/forumConstants';
 
 // ============================================================================
 // Types
@@ -33,6 +34,8 @@ interface ImprovedPostCardProps {
   onReport?: (postId: string, reason: string, details: string) => Promise<void>;
   onBookmark?: (postId: string) => Promise<void>;
   isBookmarked?: boolean;
+  onThreadReply?: (postId: string) => void;
+  depth?: number;
 }
 
 // ============================================================================
@@ -177,15 +180,7 @@ const ReportModal = memo(({ isOpen, onClose, onSubmit }: ReportModalProps) => {
   const [details, setDetails] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const reasons = [
-    { value: 'spam', label: 'Spam or advertising' },
-    { value: 'harassment', label: 'Harassment or bullying' },
-    { value: 'inappropriate_content', label: 'Inappropriate content' },
-    { value: 'misinformation', label: 'Misinformation' },
-    { value: 'off_topic', label: 'Off-topic' },
-    { value: 'duplicate', label: 'Duplicate post' },
-    { value: 'other', label: 'Other' },
-  ];
+  const reasons = REPORT_REASONS;
 
   const handleSubmit = async () => {
     if (!reason || !details.trim()) return;
@@ -310,6 +305,8 @@ export const ImprovedPostCard = memo(({
   onReport,
   onBookmark,
   isBookmarked = false,
+  onThreadReply,
+  depth = 0,
 }: ImprovedPostCardProps) => {
   const navigate = useNavigate();
   const [showEditModal, setShowEditModal] = useState(false);
@@ -318,12 +315,15 @@ export const ImprovedPostCard = memo(({
   const [isVoting, setIsVoting] = useState(false);
 
   const { canManagePosts } = usePermissions();
-  const { votePost, getPostVote } = useForumContext();
+  const { votePost, getPostVote, getUserProfile } = useForumContext();
   
   const isOwnPost = post.author.id === currentUserId;
   const canEditDelete = isOwnPost || canManagePosts;
   const currentVote = getPostVote(post.id);
   const voteScore = post.upvotes - post.downvotes;
+
+  const authorProfile = getUserProfile(post.author.id);
+  const displayAvatar = authorProfile.avatar || post.author.avatar;
 
   // Check if edit reason should be required (post older than 5 minutes)
   const postAge = Date.now() - new Date(post.createdAt).getTime();
@@ -382,7 +382,7 @@ export const ImprovedPostCard = memo(({
             
             <ProfileHoverCard user={post.author}>
               <img
-                src={post.author.avatar}
+                src={displayAvatar}
                 alt={post.author.username}
                 className="h-14 w-14 md:h-24 md:w-24 rounded-md border border-forum-border/50 object-cover cursor-pointer hover:border-forum-pink/50 transition-colors shadow-sm"
                 onClick={() => navigate(`/user/${post.author.id}`)}
@@ -406,42 +406,17 @@ export const ImprovedPostCard = memo(({
                   </div>
                 )}
                 
-                {post.author.rank && (() => {
-                  const rankIcons: Record<string, React.ReactNode> = {
-                    'Administrator': <Shield size={10} />,
-                    'Moderator': <ShieldCheck size={10} />,
-                    'Elite Hacker': <Sparkles size={10} />,
-                    'Senior Dev': <Code2 size={10} />,
-                    'Code Ninja': <Crown size={10} />,
-                  };
-                  
-                  const getRankColor = (rank?: string) => {
-                    switch (rank) {
-                      case 'Administrator': return 'text-red-400 bg-red-500/10 border-red-500/30';
-                      case 'Moderator': return 'text-purple-400 bg-purple-500/10 border-purple-500/30';
-                      case 'Elite Hacker': return 'text-forum-pink bg-forum-pink/10 border-forum-pink/30';
-                      case 'Senior Dev': return 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
-                      case 'Code Ninja': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
-                      default: return 'text-forum-muted bg-forum-hover border-forum-border/40';
-                    }
-                  };
-                  
-                  return (
-                    <span className={`w-full flex justify-center items-center gap-1.5 rounded border px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider ${getRankColor(post.author.rank)}`}>
-                      {rankIcons[post.author.rank] || <Star size={10} />}
-                      {post.author.rank}
-                    </span>
-                  );
-                })()}
+                {post.author.rank && (
+                  <span className={`w-full flex justify-center items-center gap-1.5 rounded border px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider ${getRankColorCompact(post.author.rank)}`}>
+                    {getRankIconCompact(post.author.rank)}
+                    {post.author.rank}
+                  </span>
+                )}
 
                 {post.author.reputation !== undefined && (
-                  <span className={`w-full flex justify-center items-center gap-1.5 rounded border px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider ${
-                    post.author.reputation > 0 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : 
-                    post.author.reputation < 0 ? 'text-red-400 bg-red-500/10 border-red-500/30' : 
-                    'text-forum-muted bg-forum-hover border-forum-border/40'
-                  }`}>
+                  <span className={`w-full flex justify-center items-center gap-1.5 rounded border px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider ${getReputationColor(post.author.reputation)}`}>
                     <Zap size={10} />
-                    {post.author.reputation > 0 ? `+${post.author.reputation}` : post.author.reputation} Rep
+                    {formatReputation(post.author.reputation)} Rep
                   </span>
                 )}
                 
@@ -528,10 +503,8 @@ export const ImprovedPostCard = memo(({
                 >
                   <ChevronUp size={13} strokeWidth={2.5} />
                 </button>
-                <span className={`px-2.5 py-1 text-[11px] font-mono font-bold min-w-[36px] text-center ${
-                  voteScore > 0 ? 'text-forum-pink' : voteScore < 0 ? 'text-red-400' : 'text-forum-text/80'
-                }`}>
-                  {voteScore > 0 ? `+${voteScore}` : voteScore}
+                <span className={`px-2.5 py-1 text-[11px] font-mono font-bold min-w-[36px] text-center ${getVoteScoreColor(voteScore)}`}>
+                  {formatVoteScore(voteScore)}
                 </span>
                 <button
                   onClick={async () => {

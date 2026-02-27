@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { User, Category, ForumStats, Reaction, PostData, ReputationEvent, ReputationActionType, REPUTATION_POINTS } from '@/types/forum';
 import { supabase, ForumError, handleSupabaseError, withRetry } from '@/lib/supabase';
-import { fetchPostsForThread } from '@/lib/forumDataFetchers';
+import { fetchPostsForThread } from '@/lib/forumDataFetchersOptimized';
 
 interface UsePostsParams {
     currentUser: User;
@@ -89,18 +89,34 @@ export function usePosts({
         return hasMorePostsMap[threadId] !== false;
     }, [postsMap, hasMorePostsMap]);
 
-    const addPost = useCallback(async (threadId: string, content: string, quotedPost?: { author: string; content: string }): Promise<PostData> => {
+    const addPost = useCallback(async (threadId: string, content: string, quotedPost?: { author: string; content: string }, replyTo?: string): Promise<PostData> => {
         if (!isAuthenticated || !currentUser?.id) {
             throw new ForumError('User not authenticated', 'AUTH_REQUIRED', 'You must be logged in to post replies.', false);
         }
 
+        // Validate content
+        if (!content || !content.trim()) {
+            throw new ForumError('Empty content', 'VALIDATION_ERROR', 'Post content cannot be empty', false);
+        }
+
+        const trimmedContent = content.trim();
+        
+        if (trimmedContent.length < 1) {
+            throw new ForumError('Content too short', 'VALIDATION_ERROR', 'Post must have at least 1 character', false);
+        }
+
+        if (trimmedContent.length > 50000) {
+            throw new ForumError('Content too long', 'VALIDATION_ERROR', 'Post cannot exceed 50,000 characters', false);
+        }
+
         const postId = crypto.randomUUID();
         const now = new Date().toISOString();
-        const fullContent = quotedPost ? `> **@${quotedPost.author}** wrote:\n> ${quotedPost.content}\n\n${content}` : content;
+        const fullContent = quotedPost ? `> **@${quotedPost.author}** wrote:\n> ${quotedPost.content}\n\n${trimmedContent}` : trimmedContent;
 
         const optimisticPost: PostData = {
             id: postId, threadId, content: fullContent, author: currentUser,
             createdAt: now, likes: 0, isAnswer: false, reactions: [], upvotes: 0, downvotes: 0,
+            replyTo: replyTo || undefined,
         };
 
         setPostsMap((prev) => ({ ...prev, [threadId]: [...(prev[threadId] || []), optimisticPost] }));
@@ -116,6 +132,7 @@ export function usePosts({
         try {
             const { error: postError } = await supabase.from('posts').insert({
                 id: postId, thread_id: threadId, content: fullContent, author_id: currentUser.id, created_at: now,
+                ...(replyTo ? { reply_to: replyTo } : {}),
             });
             if (postError) throw postError;
 
@@ -165,26 +182,43 @@ export function usePosts({
             throw new ForumError('User not authenticated', 'AUTH_REQUIRED', 'You must be logged in to edit posts.', false);
         }
 
+        // Validate content
+        if (!newContent || !newContent.trim()) {
+            throw new ForumError('Empty content', 'VALIDATION_ERROR', 'Post content cannot be empty', false);
+        }
+
+        const trimmedContent = newContent.trim();
+        
+        if (trimmedContent.length < 1) {
+            throw new ForumError('Content too short', 'VALIDATION_ERROR', 'Post must have at least 1 character', false);
+        }
+
+        if (trimmedContent.length > 50000) {
+            throw new ForumError('Content too long', 'VALIDATION_ERROR', 'Post cannot exceed 50,000 characters', false);
+        }
+
         const now = new Date().toISOString();
         let originalPost: PostData | null = null;
         for (const threadId in postsMap) {
             const post = postsMap[threadId].find(p => p.id === postId);
             if (post) { originalPost = post; break; }
         }
-        if (!originalPost) return;
+        if (!originalPost) {
+            throw new ForumError('Post not found', 'NOT_FOUND', 'The post you are trying to edit does not exist', false);
+        }
 
         setPostsMap((prev) => {
             const updated = { ...prev };
             for (const threadId in updated) {
                 updated[threadId] = updated[threadId].map((post) =>
-                    post.id === postId ? { ...post, content: newContent, editedAt: now } : post
+                    post.id === postId ? { ...post, content: trimmedContent, editedAt: now } : post
                 );
             }
             return updated;
         });
 
         try {
-            const { error } = await supabase.from('posts').update({ content: newContent, edited_at: now }).eq('id', postId);
+            const { error } = await supabase.from('posts').update({ content: trimmedContent, edited_at: now }).eq('id', postId);
             if (error) throw error;
         } catch (error) {
             setPostsMap((prev) => {
@@ -310,6 +344,98 @@ export function usePosts({
         setPostsMap({});
     }, []);
 
+    const deletePost = useCallback(async (postId: string): Promise<void> => {
+        if (!isAuthenticated || !currentUser?.id) {
+            throw new ForumError('User not authenticated', 'AUTH_REQUIRED', 'You must be logged in to delete posts.', false);
+        }
+
+        // Find the post and store original state for rollback
+        let originalPost: PostData | null = null;
+        let postThreadId: string | null = null;
+        for (const threadId in postsMap) {
+            const post = postsMap[threadId].find(p => p.id === postId);
+            if (post) {
+                originalPost = post;
+                postThreadId = threadId;
+                break;
+            }
+        }
+
+        if (!originalPost || !postThreadId) {
+            throw new ForumError('Post not found', 'NOT_FOUND', 'The post you are trying to delete does not exist', false);
+        }
+
+        // Optimistic update - remove post immediately
+        setPostsMap((prev) => {
+            const updated = { ...prev };
+            for (const threadId in updated) {
+                updated[threadId] = updated[threadId].filter(p => p.id !== postId);
+            }
+            return updated;
+        });
+
+        // Update thread reply count optimistically
+        setCategoriesState((prev) =>
+            prev.map((cat) => ({
+                ...cat,
+                threads: cat.threads.map((t) => t.id === postThreadId ? { ...t, replyCount: Math.max(0, t.replyCount - 1) } : t),
+                postCount: cat.threads.some((t) => t.id === postThreadId) ? Math.max(0, cat.postCount - 1) : cat.postCount,
+            }))
+        );
+
+        setStatsState((prev) => ({ 
+            ...prev, 
+            totalPosts: Math.max(0, prev.totalPosts - 1),
+        }));
+
+        try {
+            const { error } = await supabase.from('posts').delete().eq('id', postId);
+            if (error) throw error;
+
+            // Update thread reply count in database
+            const { data: currentThread, error: fetchError } = await supabase
+                .from('threads')
+                .select('reply_count')
+                .eq('id', postThreadId)
+                .single();
+            
+            if (!fetchError && currentThread) {
+                await supabase
+                    .from('threads')
+                    .update({ reply_count: Math.max(0, currentThread.reply_count - 1) })
+                    .eq('id', postThreadId);
+            }
+        } catch (error) {
+            // Rollback optimistic updates
+            setPostsMap((prev) => {
+                const updated = { ...prev };
+                if (postThreadId && originalPost) {
+                    updated[postThreadId] = [...(updated[postThreadId] || []), originalPost].sort(
+                        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    );
+                }
+                return updated;
+            });
+
+            setCategoriesState((prev) =>
+                prev.map((cat) => ({
+                    ...cat,
+                    threads: cat.threads.map((t) => t.id === postThreadId ? { ...t, replyCount: t.replyCount + 1 } : t),
+                    postCount: cat.threads.some((t) => t.id === postThreadId) ? cat.postCount + 1 : cat.postCount,
+                }))
+            );
+
+            setStatsState((prev) => ({ 
+                ...prev, 
+                totalPosts: prev.totalPosts + 1,
+            }));
+
+            const forumError = handleSupabaseError(error, 'deletePost');
+            setError('deletePost', forumError, 'Delete post');
+            throw forumError;
+        }
+    }, [postsMap, isAuthenticated, currentUser, setCategoriesState, setStatsState, setError]);
+
     return {
         postsMap,
         setPostsMap,
@@ -319,6 +445,7 @@ export function usePosts({
         hasMorePosts,
         addPost,
         editPost,
+        deletePost,
         togglePostLike,
         togglePostReaction,
         resetPosts,

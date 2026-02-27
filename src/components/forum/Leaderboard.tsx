@@ -8,7 +8,7 @@ import { User } from '@/types/forum';
 
 export default function Leaderboard() {
   const navigate = useNavigate();
-  const { getCalculatedReputation } = useForumContext();
+  const { getCalculatedReputation, getUserProfile } = useForumContext();
   const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
@@ -77,14 +77,12 @@ export default function Leaderboard() {
           <div
             key={user.id}
             onClick={() => navigate(`/user/${user.id}`)}
-            className={`flex items-center gap-2.5 rounded px-2 py-1.5 hover:bg-forum-hover transition-forum cursor-pointer group ${
-              idx === 0 ? 'bg-forum-pink/5' : ''
-            }`}
+            className={`flex items-center gap-2.5 rounded px-2 py-1.5 hover:bg-forum-hover transition-forum cursor-pointer group ${idx === 0 ? 'bg-forum-pink/5' : ''
+              }`}
           >
             {/* Rank */}
-            <span className={`text-[10px] font-mono font-bold w-5 text-center flex-shrink-0 ${
-              idx === 0 ? 'text-forum-pink' : idx === 1 ? 'text-cyan-400' : idx === 2 ? 'text-amber-400' : 'text-forum-muted/50'
-            }`}>
+            <span className={`text-[10px] font-mono font-bold w-5 text-center flex-shrink-0 ${idx === 0 ? 'text-forum-pink' : idx === 1 ? 'text-cyan-400' : idx === 2 ? 'text-amber-400' : 'text-forum-muted/50'
+              }`}>
               {idx === 0 ? (
                 <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-forum-pink/25 to-forum-pink/10 border border-forum-pink/40 animate-featured-glow">
                   <Crown size={10} className="text-forum-pink drop-shadow-[0_0_3px_rgba(255,45,146,0.6)]" />
@@ -103,11 +101,10 @@ export default function Leaderboard() {
             {/* Avatar */}
             <div className="relative flex-shrink-0">
               <img
-                src={user.avatar}
+                src={getUserProfile(user.id).avatar || user.avatar}
                 alt={user.username}
-                className={`h-6 w-6 rounded object-cover border ${
-                  idx === 0 ? 'border-forum-pink/40' : 'border-forum-border'
-                }`}
+                className={`h-6 w-6 rounded object-cover border ${idx === 0 ? 'border-forum-pink/40' : 'border-forum-border'
+                  }`}
               />
               {user.isOnline && (
                 <div className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-forum-card bg-emerald-400" />
@@ -124,9 +121,8 @@ export default function Leaderboard() {
             {/* Reputation */}
             <div className="flex items-center gap-1 flex-shrink-0">
               <Flame size={8} className={idx === 0 ? 'text-forum-pink' : 'text-forum-muted/40'} />
-              <span className={`text-[10px] font-mono font-semibold ${
-                idx === 0 ? 'text-forum-pink' : 'text-forum-text'
-              }`}>
+              <span className={`text-[10px] font-mono font-semibold ${idx === 0 ? 'text-forum-pink' : 'text-forum-text'
+                }`}>
                 {getCalculatedReputation(user.id).toLocaleString()}
               </span>
             </div>

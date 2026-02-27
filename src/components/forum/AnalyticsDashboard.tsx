@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import ForumHeader from '@/components/forum/ForumHeader';
 import MobileBottomNav from '@/components/forum/MobileBottomNav';
 import { supabase } from '@/lib/supabase';
+import { useForumContext } from '@/context/ForumContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import {
     BarChart3,
     TrendingUp,
@@ -15,6 +17,8 @@ import {
     Home as HomeIcon,
     Activity,
     Calendar,
+    Shield,
+    AlertTriangle,
 } from 'lucide-react';
 
 interface DailyStats {
@@ -43,6 +47,8 @@ export default function AnalyticsDashboard() {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const { getUserProfile } = useForumContext();
+    const { isStaff } = usePermissions();
     const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
     const [topThreads, setTopThreads] = useState<TopThread[]>([]);
     const [topUsers, setTopUsers] = useState<TopUser[]>([]);
@@ -173,6 +179,55 @@ export default function AnalyticsDashboard() {
         { label: 'Activity', value: totalStats.posts7d + totalStats.threads7d, icon: Activity, color: 'text-amber-400', bg: 'bg-amber-500/10' },
     ];
 
+    // Access control - only staff can view analytics
+    if (!isStaff) {
+        return (
+            <div className="min-h-screen bg-forum-bg pb-20 lg:pb-0">
+                <ForumHeader
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    isMobileMenuOpen={isMobileMenuOpen}
+                />
+
+                {/* Breadcrumb */}
+                <div className="mx-auto max-w-7xl px-4 lg:px-6 pt-4 pb-2">
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-forum-muted">
+                        <HomeIcon size={11} className="text-forum-pink" />
+                        <span className="text-forum-text hover:text-forum-pink transition-forum cursor-pointer" onClick={() => navigate('/')}>
+                            Forums
+                        </span>
+                        <ChevronRight size={10} />
+                        <span className="text-forum-muted">Analytics</span>
+                    </div>
+                </div>
+
+                {/* Access Denied */}
+                <div className="mx-auto max-w-7xl px-4 lg:px-6 py-12">
+                    <div className="hud-panel p-12 text-center">
+                        <div className="flex justify-center mb-4">
+                            <div className="h-16 w-16 rounded-full bg-forum-pink/10 flex items-center justify-center">
+                                <Shield size={32} className="text-forum-pink" />
+                            </div>
+                        </div>
+                        <h2 className="text-[18px] font-bold text-forum-text font-mono mb-2">Access Restricted</h2>
+                        <p className="text-[12px] text-forum-muted font-mono mb-6 max-w-md mx-auto">
+                            Analytics dashboard is only accessible to moderators and administrators.
+                        </p>
+                        <button
+                            onClick={() => navigate('/')}
+                            className="transition-forum rounded bg-forum-pink px-6 py-2.5 text-[11px] font-mono font-semibold text-white hover:shadow-pink-glow active:scale-95 border border-forum-pink/50"
+                        >
+                            Back to Forums
+                        </button>
+                    </div>
+                </div>
+
+                <MobileBottomNav />
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-forum-bg pb-20 lg:pb-0">
             <ForumHeader
@@ -300,7 +355,7 @@ export default function AnalyticsDashboard() {
                                         {i + 1}
                                     </span>
                                     <img
-                                        src={user.avatar}
+                                        src={getUserProfile(user.id).avatar || user.avatar}
                                         alt={user.username}
                                         className="h-7 w-7 rounded-md border border-forum-border object-cover"
                                     />

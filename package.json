@@ -17,7 +17,8 @@
     "add-sticky": "node scripts/add-sticky-categories.js",
     "check-categories": "node scripts/check-and-fix-categories.js",
     "force-categories": "node scripts/force-create-categories.js",
-    "debug-db": "node scripts/debug-database.js"
+    "debug-db": "node scripts/debug-database.js",
+    "fix-relationships": "node scripts/fix-post-relationships.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -57,6 +58,7 @@
     "dotenv": "^17.3.1",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^11.18.0",
+    "highlight.js": "^11.11.1",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.394.0",
     "next-themes": "^0.4.6",
@@ -64,10 +66,13 @@
     "react-day-picker": "^9.12.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.68.0",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^2.1.9",
     "react-router": "^6.23.1",
     "react-router-dom": "^6.23.1",
     "recharts": "^2.15.4",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",

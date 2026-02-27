@@ -12,11 +12,12 @@ export type { PostData, PollData, Reaction };
 import { useForumErrors } from '@/hooks/forum/useForumErrors';
 import { useForumUser } from '@/hooks/forum/useForumUser';
 import { useCategories } from '@/hooks/forum/useCategories';
-import { useRealtime } from '@/hooks/forum/useRealtime';
-import { usePosts } from '@/hooks/forum/usePosts';
+import { useRealtime } from '@/hooks/forum/useRealtimeOptimized';
+import { usePosts } from '@/hooks/forum/usePostsOptimized';
 import { usePolls } from '@/hooks/forum/usePolls';
 import { useVoting } from '@/hooks/forum/useVoting';
-import { useBookmarksWatches } from '@/hooks/forum/useBookmarksWatches';
+import { useWatches } from '@/hooks/forum/useWatches';
+import { usePostBookmarks } from '@/hooks/forum/usePostBookmarks';
 import { useReputation } from '@/hooks/forum/useReputation';
 
 // ============================================================================
@@ -49,11 +50,13 @@ interface ForumContextType {
 
   // Post operations
   getPostsForThread: (threadId: string, page?: number, pageSize?: number) => PostData[];
+  prefetchPosts: (threadId: string) => void;
   loadMorePosts: (threadId: string) => Promise<void>;
   hasMorePosts: (threadId: string) => boolean;
   unsubscribeFromThreadPosts: (threadId: string) => void;
-  addPost: (threadId: string, content: string, quotedPost?: { author: string; content: string }) => Promise<PostData>;
+  addPost: (threadId: string, content: string, quotedPost?: { author: string; content: string }, replyTo?: string) => Promise<PostData>;
   editPost: (postId: string, newContent: string) => Promise<void>;
+  deletePost: (postId: string) => Promise<void>;
   togglePostLike: (postId: string) => void;
   togglePostReaction: (postId: string, emoji: string, label: string) => void;
 
@@ -62,11 +65,13 @@ interface ForumContextType {
   votePoll: (threadId: string, optionIds: string[]) => void;
 
   // Thread actions
-  toggleBookmark: (threadId: string) => Promise<void>;
-  isBookmarked: (threadId: string) => boolean;
   toggleWatch: (threadId: string) => void;
   isWatching: (threadId: string) => boolean;
   markThreadRead: (threadId: string) => void;
+
+  // Post bookmark actions
+  togglePostBookmark: (postId: string) => Promise<void>;
+  isPostBookmarked: (postId: string) => boolean;
 
   // Vote operations
   voteThread: (threadId: string, direction: 'up' | 'down') => void;
@@ -183,10 +188,16 @@ export function ForumProvider({ children }: { children: ReactNode }) {
     setError,
   });
 
-  // --- Bookmarks & Watches ---
-  const bookmarksWatches = useBookmarksWatches({
+  // --- Watches ---
+  const watches = useWatches({
     currentUser, isAuthenticated, authUserId,
     setCategoriesState: categories.setCategoriesState,
+    setError,
+  });
+
+  // --- Post Bookmarks ---
+  const postBookmarks = usePostBookmarks({
+    isAuthenticated, authUserId,
     setError,
   });
 
@@ -206,7 +217,8 @@ export function ForumProvider({ children }: { children: ReactNode }) {
       realtime.cleanupAllSubscriptions();
       posts.resetPosts();
       polls.resetPolls();
-      bookmarksWatches.resetBookmarksWatches();
+      watches.resetWatches();
+      postBookmarks.resetPostBookmarks();
       voting.resetVotes();
       connectedReputation.resetReputation();
       setConnectionWarning(null);
@@ -238,20 +250,22 @@ export function ForumProvider({ children }: { children: ReactNode }) {
     hasMoreThreads: categories.hasMoreThreads,
     createThread: createThreadWrapper,
     getPostsForThread: posts.getPostsForThread,
+    prefetchPosts: posts.prefetchPosts,
     loadMorePosts: posts.loadMorePosts,
     hasMorePosts: posts.hasMorePosts,
     unsubscribeFromThreadPosts: realtime.unsubscribeFromThreadPosts,
     addPost: posts.addPost,
     editPost: posts.editPost,
+    deletePost: posts.deletePost,
     togglePostLike: posts.togglePostLike,
     togglePostReaction: posts.togglePostReaction,
     getPollForThread: polls.getPollForThread,
     votePoll: polls.votePoll,
-    toggleBookmark: bookmarksWatches.toggleBookmark,
-    isBookmarked: bookmarksWatches.isBookmarked,
-    isWatching: bookmarksWatches.isWatching,
-    toggleWatch: bookmarksWatches.toggleWatch,
-    markThreadRead: bookmarksWatches.markThreadRead,
+    toggleWatch: watches.toggleWatch,
+    isWatching: watches.isWatching,
+    markThreadRead: watches.markThreadRead,
+    togglePostBookmark: postBookmarks.togglePostBookmark,
+    isPostBookmarked: postBookmarks.isPostBookmarked,
     voteThread: voting.voteThread,
     getThreadVote: voting.getThreadVote,
     votePost: voting.votePost,
@@ -276,12 +290,12 @@ export function ForumProvider({ children }: { children: ReactNode }) {
     categories.loadingCategories, categories.loadingStats, posts.loadingPosts,
     categories.getThread, categories.getCategory, categories.getCategoryForThread, categories.getAllThreads,
     categories.loadMoreThreads, categories.hasMoreThreads, createThreadWrapper,
-    posts.getPostsForThread, posts.loadMorePosts, posts.hasMorePosts,
+    posts.getPostsForThread, posts.prefetchPosts, posts.loadMorePosts, posts.hasMorePosts,
     realtime.unsubscribeFromThreadPosts,
-    posts.addPost, posts.editPost, posts.togglePostLike, posts.togglePostReaction,
+    posts.addPost, posts.editPost, posts.deletePost, posts.togglePostLike, posts.togglePostReaction,
     polls.getPollForThread, polls.votePoll,
-    bookmarksWatches.toggleBookmark, bookmarksWatches.isBookmarked,
-    bookmarksWatches.isWatching, bookmarksWatches.toggleWatch, bookmarksWatches.markThreadRead,
+    watches.toggleWatch, watches.isWatching, watches.markThreadRead,
+    postBookmarks.togglePostBookmark, postBookmarks.isPostBookmarked,
     voting.voteThread, voting.getThreadVote, voting.votePost, voting.getPostVote,
     updateUserProfile, getUserProfile, pageSize, setPageSize,
     connectedReputation.getReputationHistory, connectedReputation.getCalculatedReputation,

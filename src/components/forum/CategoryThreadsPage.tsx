@@ -6,9 +6,7 @@ import SortControls from '@/components/forum/SortControls';
 import FilterDropdown from '@/components/forum/FilterDropdown';
 import ForumPagination from '@/components/forum/ForumPagination';
 import SidebarStatsPanel from '@/components/forum/SidebarStatsPanel';
-import UserProfileMiniCard from '@/components/forum/UserProfileMiniCard';
 import OnlineUsers from '@/components/forum/OnlineUsers';
-import Leaderboard from '@/components/forum/Leaderboard';
 import RecentActivityFeed from '@/components/forum/RecentActivityFeed';
 import PopularTags from '@/components/forum/PopularTags';
 import FloatingActionButton from '@/components/forum/FloatingActionButton';
@@ -64,7 +62,7 @@ export default function CategoryThreadsPage() {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { categories, forumStats, currentUser, pageSize, setPageSize, availablePageSizes } = useForumContext();
+  const { categories, forumStats, currentUser, pageSize, setPageSize, availablePageSizes, getUserProfile } = useForumContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSort, setActiveSort] = useState<SortOption>(getSavedSort);
   const [activeFilter, setActiveFilter] = useState<FilterOption>('all');
@@ -360,11 +358,10 @@ export default function CategoryThreadsPage() {
               <span className="text-[9px] font-mono font-semibold text-forum-pink uppercase tracking-wider flex-shrink-0">Topics:</span>
               <button
                 onClick={() => { setSearchParams({}); setCurrentPage(1); }}
-                className={`rounded-sm border px-2 py-0.5 text-[9px] font-mono font-medium transition-forum cursor-pointer ${
-                  !activeTopic
-                    ? 'border-forum-pink/40 bg-forum-pink/15 text-forum-pink'
-                    : 'border-forum-pink/10 bg-forum-pink/[0.04] text-forum-pink/70 hover:bg-forum-pink/10 hover:text-forum-pink hover:border-forum-pink/25'
-                }`}
+                className={`rounded-sm border px-2 py-0.5 text-[9px] font-mono font-medium transition-forum cursor-pointer ${!activeTopic
+                  ? 'border-forum-pink/40 bg-forum-pink/15 text-forum-pink'
+                  : 'border-forum-pink/10 bg-forum-pink/[0.04] text-forum-pink/70 hover:bg-forum-pink/10 hover:text-forum-pink hover:border-forum-pink/25'
+                  }`}
               >
                 All Topics
               </button>
@@ -372,11 +369,10 @@ export default function CategoryThreadsPage() {
                 <button
                   key={topic.id}
                   onClick={() => { setSearchParams({ topic: topic.id }); setCurrentPage(1); }}
-                  className={`rounded-sm border px-2 py-0.5 text-[9px] font-mono font-medium transition-forum cursor-pointer ${
-                    activeTopic === topic.id
-                      ? 'border-forum-pink/40 bg-forum-pink/15 text-forum-pink'
-                      : 'border-forum-pink/10 bg-forum-pink/[0.04] text-forum-pink/70 hover:bg-forum-pink/10 hover:text-forum-pink hover:border-forum-pink/25'
-                  }`}
+                  className={`rounded-sm border px-2 py-0.5 text-[9px] font-mono font-medium transition-forum cursor-pointer ${activeTopic === topic.id
+                    ? 'border-forum-pink/40 bg-forum-pink/15 text-forum-pink'
+                    : 'border-forum-pink/10 bg-forum-pink/[0.04] text-forum-pink/70 hover:bg-forum-pink/10 hover:text-forum-pink hover:border-forum-pink/25'
+                    }`}
                 >
                   {topic.name}
                 </button>
@@ -455,8 +451,8 @@ export default function CategoryThreadsPage() {
                     {searchQuery
                       ? `No results for "${searchQuery}". Try a different search term.`
                       : activeFilter !== 'all'
-                      ? 'No threads match the selected filter. Try changing your filter.'
-                      : 'This category has no threads yet. Be the first to start a discussion!'}
+                        ? 'No threads match the selected filter. Try changing your filter.'
+                        : 'This category has no threads yet. Be the first to start a discussion!'}
                   </p>
                   {(searchQuery || activeFilter !== 'all') && (
                     <button
@@ -510,8 +506,6 @@ export default function CategoryThreadsPage() {
 
           {/* Sidebar */}
           <div className="hidden w-[280px] flex-shrink-0 space-y-4 lg:block">
-            <UserProfileMiniCard user={currentUser} />
-
             {/* Category Info Card */}
             <div className="hud-panel p-4 space-y-3">
               <h4 className="text-[11px] font-mono font-bold text-forum-text uppercase tracking-wider flex items-center gap-2">
@@ -566,7 +560,7 @@ export default function CategoryThreadsPage() {
                     <div key={id} className="flex items-center gap-2.5 py-1">
                       <span className="text-[10px] font-mono font-bold text-forum-muted w-4">{idx + 1}.</span>
                       <img
-                        src={user.avatar}
+                        src={getUserProfile(user.id).avatar || user.avatar}
                         alt={user.username}
                         className="h-6 w-6 rounded-full object-cover border border-forum-border"
                       />
@@ -580,7 +574,6 @@ export default function CategoryThreadsPage() {
             </div>
 
             <SidebarStatsPanel stats={forumStats} />
-            <Leaderboard />
             <RecentActivityFeed />
             <PopularTags />
             <OnlineUsers />
@@ -596,9 +589,7 @@ export default function CategoryThreadsPage() {
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div className="absolute right-0 top-0 bottom-0 w-[300px] overflow-y-auto border-l border-forum-border bg-forum-card p-4 space-y-4">
-            <UserProfileMiniCard user={currentUser} />
             <SidebarStatsPanel stats={forumStats} />
-            <Leaderboard />
             <RecentActivityFeed />
             <PopularTags />
             <OnlineUsers />

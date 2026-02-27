@@ -284,11 +284,11 @@ export default function UserProfilePage() {
         // Silently fail — will use defaults
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const currentAvatar = profileCustom.avatar || user?.avatar || '';
-  const currentBanner = profileCustom.banner || '';
+  const currentBanner = profileCustom.banner || user?.banner || '';
 
   const handleImageUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -565,9 +565,8 @@ export default function UserProfilePage() {
                       style={{ borderWidth: '3px' }}
                     />
                     <div
-                      className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-3 ${
-                        user.isOnline ? 'bg-emerald-400' : 'bg-forum-muted/50'
-                      }`}
+                      className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-3 ${user.isOnline ? 'bg-emerald-400' : 'bg-forum-muted/50'
+                        }`}
                       style={{ borderWidth: '3px', borderColor: '#0d0d12' }}
                     />
                     {/* Avatar upload overlay (visible in edit mode) */}
@@ -691,11 +690,10 @@ export default function UserProfilePage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-mono font-bold transition-forum border-b-2 ${
-                      activeTab === tab.id
-                        ? 'text-forum-pink border-forum-pink bg-forum-pink/5'
-                        : 'text-forum-muted border-transparent hover:text-forum-text hover:bg-forum-hover'
-                    }`}
+                    className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-mono font-bold transition-forum border-b-2 ${activeTab === tab.id
+                      ? 'text-forum-pink border-forum-pink bg-forum-pink/5'
+                      : 'text-forum-muted border-transparent hover:text-forum-text hover:bg-forum-hover'
+                      }`}
                   >
                     <tab.icon size={12} />
                     {tab.label}
@@ -721,13 +719,17 @@ export default function UserProfilePage() {
                         >
                           <div className="flex-shrink-0">
                             {thread.author.id === userId ? (
-                              <div className="h-8 w-8 rounded bg-forum-pink/10 border border-forum-pink/20 flex items-center justify-center">
-                                <BookOpen size={12} className="text-forum-pink" />
-                              </div>
+                              <img
+                                src={profileCustom.avatar || thread.author.avatar}
+                                alt={thread.author.username}
+                                className="h-8 w-8 rounded object-cover border border-forum-border"
+                              />
                             ) : (
-                              <div className="h-8 w-8 rounded bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-                                <MessageSquare size={12} className="text-cyan-400" />
-                              </div>
+                              <img
+                                src={getUserProfile(thread.author.id).avatar || thread.author.avatar}
+                                alt={thread.author.username}
+                                className="h-8 w-8 rounded object-cover border border-forum-border"
+                              />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -887,11 +889,10 @@ export default function UserProfilePage() {
                         </span>
                         {repChange24h !== 0 && (
                           <span
-                            className={`flex items-center gap-0.5 text-[12px] font-mono font-bold px-2 py-0.5 rounded border ${
-                              repChange24h > 0
-                                ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
-                                : 'text-red-400 border-red-500/30 bg-red-500/10'
-                            }`}
+                            className={`flex items-center gap-0.5 text-[12px] font-mono font-bold px-2 py-0.5 rounded border ${repChange24h > 0
+                              ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
+                              : 'text-red-400 border-red-500/30 bg-red-500/10'
+                              }`}
                           >
                             <TrendingUp size={11} className={repChange24h < 0 ? 'rotate-180' : ''} />
                             {repChange24h > 0 ? '+' : ''}{repChange24h}
@@ -958,19 +959,17 @@ export default function UserProfilePage() {
                           return (
                             <div
                               key={milestone.threshold}
-                              className={`flex items-center gap-3 px-3 py-2 rounded border transition-forum ${
-                                reached
-                                  ? 'border-forum-pink/20 bg-forum-pink/5'
-                                  : 'border-forum-border bg-forum-bg/30'
-                              }`}
+                              className={`flex items-center gap-3 px-3 py-2 rounded border transition-forum ${reached
+                                ? 'border-forum-pink/20 bg-forum-pink/5'
+                                : 'border-forum-border bg-forum-bg/30'
+                                }`}
                             >
                               <span className="text-lg">{milestone.icon}</span>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-0.5">
                                   <span
-                                    className={`text-[10px] font-mono font-bold ${
-                                      reached ? 'text-forum-pink' : 'text-forum-muted'
-                                    }`}
+                                    className={`text-[10px] font-mono font-bold ${reached ? 'text-forum-pink' : 'text-forum-muted'
+                                      }`}
                                   >
                                     {milestone.label}
                                   </span>
@@ -1021,11 +1020,10 @@ export default function UserProfilePage() {
 
                               {/* Dot */}
                               <div
-                                className={`relative z-10 mt-1 flex-shrink-0 h-[22px] w-[22px] rounded-full border flex items-center justify-center ${
-                                  isPositive
-                                    ? 'border-emerald-500/40 bg-emerald-500/10'
-                                    : 'border-red-500/40 bg-red-500/10'
-                                }`}
+                                className={`relative z-10 mt-1 flex-shrink-0 h-[22px] w-[22px] rounded-full border flex items-center justify-center ${isPositive
+                                  ? 'border-emerald-500/40 bg-emerald-500/10'
+                                  : 'border-red-500/40 bg-red-500/10'
+                                  }`}
                               >
                                 {getActionIcon(event.action)}
                               </div>
@@ -1037,11 +1035,10 @@ export default function UserProfilePage() {
                                     {event.description}
                                   </span>
                                   <span
-                                    className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                                      isPositive
-                                        ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
-                                        : 'text-red-400 bg-red-500/10 border border-red-500/20'
-                                    }`}
+                                    className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${isPositive
+                                      ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                                      : 'text-red-400 bg-red-500/10 border border-red-500/20'
+                                      }`}
                                   >
                                     {isPositive ? '+' : ''}{event.points}
                                   </span>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, History, Clock, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useForumContext } from '@/context/ForumContext';
 
 interface PostEditHistory {
   id: string;
@@ -37,6 +38,7 @@ export default function PostEditHistoryModal({
   const [loading, setLoading] = useState(true);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [showDiff, setShowDiff] = useState(false);
+  const { getUserProfile } = useForumContext();
 
   useEffect(() => {
     if (!isOpen || !postId) return;
@@ -148,16 +150,15 @@ export default function PostEditHistoryModal({
               {history.map((entry) => (
                 <div
                   key={entry.id}
-                  className={`border rounded-md overflow-hidden transition-forum ${
-                    selectedVersion === entry.version
+                  className={`border rounded-md overflow-hidden transition-forum ${selectedVersion === entry.version
                       ? 'border-forum-pink/30 bg-forum-pink/5'
                       : 'border-forum-border/30 bg-forum-bg/50'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between px-4 py-2.5 bg-forum-card-alt/30 border-b border-forum-border/20">
                     <div className="flex items-center gap-3">
                       <img
-                        src={entry.editor.avatar}
+                        src={getUserProfile(entry.edited_by).avatar || entry.editor.avatar}
                         alt={entry.editor.username}
                         className="h-6 w-6 rounded border border-forum-border object-cover"
                       />

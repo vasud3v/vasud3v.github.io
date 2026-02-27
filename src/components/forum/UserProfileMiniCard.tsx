@@ -21,6 +21,7 @@ export default function UserProfileMiniCard({ user }: UserProfileMiniCardProps) 
   } = useForumContext();
   const profileCustom = getUserProfile(user.id);
   const displayAvatar = getUserAvatar(profileCustom.avatar || user.avatar, user.username);
+  const displayBanner = profileCustom.banner || user.banner;
   const calculatedRep = getCalculatedReputation(user.id);
   const repChange = getReputationChange24h(user.id);
   
@@ -74,19 +75,32 @@ export default function UserProfileMiniCard({ user }: UserProfileMiniCardProps) 
 
   return (
     <div className="hud-panel overflow-hidden">
-      {/* Top gradient banner */}
+      {/* Top banner */}
       <div
         className="relative h-14 overflow-hidden cursor-pointer"
         onClick={() => navigate(`/user/${user.id}`)}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-forum-pink/20 via-forum-card to-forum-pink/10" />
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,45,146,0.15) 2px, rgba(255,45,146,0.15) 4px)',
-          }}
-        />
+        {displayBanner ? (
+          <>
+            <img
+              src={displayBanner}
+              alt="Profile banner"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-forum-card/30" />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-forum-pink/20 via-forum-card to-forum-pink/10" />
+            <div
+              className="absolute inset-0 opacity-[0.04]"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,45,146,0.15) 2px, rgba(255,45,146,0.15) 4px)',
+              }}
+            />
+          </>
+        )}
         <button className="absolute top-2 right-2 p-1 rounded text-forum-muted/50 hover:text-forum-pink transition-forum hover:bg-forum-bg/50">
           <Settings size={11} />
         </button>

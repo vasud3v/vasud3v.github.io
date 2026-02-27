@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Thread, Category, ForumStats, User, ReputationEvent, ReputationActionType, REPUTATION_POINTS } from '@/types/forum';
 import { PostData } from '@/types/forum';
 import { supabase, ForumError, handleSupabaseError, withRetry } from '@/lib/supabase';
-import { fetchCategories, fetchForumStats } from '@/lib/forumDataFetchers';
+import { fetchCategories, fetchForumStats } from '@/lib/forumDataFetchersOptimized';
 
 interface UseCategoriesParams {
     currentUser: User;

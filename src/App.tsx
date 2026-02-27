@@ -10,6 +10,8 @@ import WhatsNewPage from "./components/forum/WhatsNewPage";
 import MembersPage from "./components/forum/MembersPage";
 import ForumRulesPage from "./components/forum/ForumRulesPage";
 import SearchPage from "./components/forum/SearchPage";
+import PostBookmarksPage from "./components/forum/PostBookmarksPage";
+import WatchedThreadsPage from "./components/forum/WatchedThreadsPage";
 import AdminDashboard from "./components/forum/AdminDashboard";
 import AnalyticsDashboard from "./components/forum/AnalyticsDashboard";
 import { ForumProvider } from "@/context/ForumContext";
@@ -31,6 +33,8 @@ function AppContent() {
           <Route path="/members" element={<MembersPage />} />
           <Route path="/rules" element={<ForumRulesPage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/bookmarks" element={<PostBookmarksPage />} />
+          <Route path="/watched" element={<WatchedThreadsPage />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/analytics" element={<AnalyticsDashboard />} />
           <Route path="/category/:categoryId" element={<CategoryThreadsPage />} />

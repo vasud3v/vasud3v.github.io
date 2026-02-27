@@ -2,23 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   X,
-  Bold,
-  Italic,
-  Link as LinkIcon,
-  Code,
-  List,
   PenSquare,
   Check,
   AlertCircle,
   Tag,
-  Table,
-  EyeOff,
-  Strikethrough,
-  Heading,
   Smile,
 } from 'lucide-react';
 import { useForumContext } from '@/context/ForumContext';
 import ImageUploadButton from '@/components/forum/ImageUploadButton';
+import { COMMON_EMOJIS, MARKDOWN_TOOLBAR_ACTIONS } from '@/lib/forumConstants';
 
 interface NewThreadModalProps {
   isOpen: boolean;
@@ -44,12 +36,6 @@ export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: N
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
-  const commonEmojis = [
-    '😀', '😂', '🤔', '👍', '👎', '🔥', '💡', '❤️', '🎉', '👀',
-    '🚀', '💯', '🐛', '⚡', '🤖', '🎯', '✅', '❌', '⚠️', '💀',
-    '🧠', '💻', '🔧', '📦', '🎨', '🛡️', '☕', '🌟', '😎', '🤝',
-  ];
 
   const handleSubmit = async () => {
     const newErrors: typeof errors = {};
@@ -171,11 +157,10 @@ export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: N
               }}
               placeholder="Enter your thread title..."
               maxLength={200}
-              className={`transition-forum w-full rounded border bg-forum-bg px-4 py-2.5 text-[12px] font-mono text-forum-text placeholder-forum-muted outline-none focus:ring-1 ${
-                errors.title
+              className={`transition-forum w-full rounded border bg-forum-bg px-4 py-2.5 text-[12px] font-mono text-forum-text placeholder-forum-muted outline-none focus:ring-1 ${errors.title
                   ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/30'
                   : 'border-forum-border focus:border-forum-pink focus:ring-forum-pink/30'
-              }`}
+                }`}
             />
             <div className="flex items-center justify-between mt-1">
               {errors.title ? (
@@ -200,11 +185,10 @@ export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: N
                 setSelectedCategory(e.target.value);
                 setErrors({ ...errors, category: undefined });
               }}
-              className={`transition-forum w-full appearance-none rounded border bg-forum-bg px-4 py-2.5 pr-8 text-[12px] font-mono text-forum-text outline-none cursor-pointer focus:ring-1 ${
-                errors.category
+              className={`transition-forum w-full appearance-none rounded border bg-forum-bg px-4 py-2.5 pr-8 text-[12px] font-mono text-forum-text outline-none cursor-pointer focus:ring-1 ${errors.category
                   ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/30'
                   : 'border-forum-border focus:border-forum-pink focus:ring-forum-pink/30'
-              }`}
+                }`}
             >
               <option value="" className="bg-forum-card">Select a category...</option>
               {categories
@@ -260,91 +244,26 @@ export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: N
             </label>
             {/* Rich text editor toolbar */}
             <div className="flex items-center gap-1 rounded-t border border-b-0 border-forum-border bg-forum-card-alt px-2 py-1.5 flex-wrap">
-              <button
-                type="button"
-                onClick={() => insertMarkdown('**bold**')}
-                className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
-                title="Bold"
-              >
-                <Bold size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown('*italic*')}
-                className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
-                title="Italic"
-              >
-                <Italic size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown('~~strikethrough~~')}
-                className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
-                title="Strikethrough"
-              >
-                <Strikethrough size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown('## Heading')}
-                className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
-                title="Heading"
-              >
-                <Heading size={14} />
-              </button>
-              <div className="w-px h-4 bg-forum-border/30 mx-0.5" />
-              <button
-                type="button"
-                onClick={() => insertMarkdown('`inline code`')}
-                className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
-                title="Inline Code"
-              >
-                <span className="text-[10px] font-mono font-bold">{'{}'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown('[link text](url)')}
-                className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
-                title="Link"
-              >
-                <LinkIcon size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown('\n```\ncode\n```\n')}
-                className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
-                title="Code Block"
-              >
-                <Code size={14} />
-              </button>
+              {MARKDOWN_TOOLBAR_ACTIONS.map((action, i) => (
+                <span key={i} className="contents">
+                  {action.separator && <div className="w-px h-4 bg-forum-border/30 mx-0.5" />}
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown(action.insertText)}
+                    className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
+                    title={action.tooltip}
+                  >
+                    {action.icon ? (
+                      <action.icon size={14} />
+                    ) : (
+                      <span className="text-[10px] font-mono font-bold">{action.iconLabel}</span>
+                    )}
+                  </button>
+                </span>
+              ))}
               <ImageUploadButton
                 onImageInsert={(markdown) => setContent((prev) => prev + markdown)}
               />
-              <button
-                type="button"
-                onClick={() => insertMarkdown('\n- item\n- item\n- item\n')}
-                className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
-                title="List"
-              >
-                <List size={14} />
-              </button>
-              <div className="w-px h-4 bg-forum-border/30 mx-0.5" />
-              <button
-                type="button"
-                onClick={() => insertMarkdown('\n| Header 1 | Header 2 | Header 3 |\n|----------|----------|----------|\n| Cell 1   | Cell 2   | Cell 3   |\n| Cell 4   | Cell 5   | Cell 6   |\n')}
-                className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
-                title="Insert Table"
-              >
-                <Table size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown('\n[spoiler]Hidden content goes here[/spoiler]\n')}
-                className="transition-forum rounded p-1.5 text-forum-muted hover:bg-forum-hover hover:text-forum-pink"
-                title="Spoiler Tag"
-              >
-                <EyeOff size={14} />
-              </button>
               {/* Emoji picker */}
               <div className="relative">
                 <button
@@ -366,7 +285,7 @@ export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: N
                         </button>
                       </div>
                       <div className="grid grid-cols-10 gap-0.5">
-                        {commonEmojis.map((emoji) => (
+                        {COMMON_EMOJIS.map((emoji) => (
                           <button
                             key={emoji}
                             type="button"
@@ -395,11 +314,10 @@ export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: N
               }}
               placeholder="Write your thread content here... (Markdown supported)"
               rows={8}
-              className={`transition-forum w-full rounded-b border bg-forum-bg px-4 py-3 text-[12px] font-mono text-forum-text placeholder-forum-muted outline-none resize-none focus:ring-1 leading-relaxed ${
-                errors.content
+              className={`transition-forum w-full rounded-b border bg-forum-bg px-4 py-3 text-[12px] font-mono text-forum-text placeholder-forum-muted outline-none resize-none focus:ring-1 leading-relaxed ${errors.content
                   ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/30'
                   : 'border-forum-border focus:border-forum-pink focus:ring-forum-pink/30'
-              }`}
+                }`}
             />
             <div className="flex items-center justify-between mt-1">
               {errors.content ? (

@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ForumHeader from '@/components/forum/ForumHeader';
 import SidebarStatsPanel from '@/components/forum/SidebarStatsPanel';
-import UserProfileMiniCard from '@/components/forum/UserProfileMiniCard';
 import FloatingActionButton from '@/components/forum/FloatingActionButton';
 import NewThreadModal from '@/components/forum/NewThreadModal';
 import { useForumContext } from '@/context/ForumContext';
@@ -26,7 +25,7 @@ type MemberSort = 'reputation' | 'posts' | 'newest' | 'alphabetical';
 
 export default function MembersPage() {
   const navigate = useNavigate();
-  const { forumStats, currentUser, getCalculatedReputation } = useForumContext();
+  const { forumStats, currentUser, getCalculatedReputation, getUserProfile } = useForumContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [memberSearch, setMemberSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -192,11 +191,10 @@ export default function MembersPage() {
                     <button
                       key={opt.key}
                       onClick={() => setSortBy(opt.key)}
-                      className={`transition-forum rounded px-2.5 py-1.5 text-[9px] font-mono font-medium ${
-                        sortBy === opt.key
+                      className={`transition-forum rounded px-2.5 py-1.5 text-[9px] font-mono font-medium ${sortBy === opt.key
                           ? 'bg-forum-pink/10 text-forum-pink border border-forum-pink/20'
                           : 'text-forum-muted hover:text-forum-text hover:bg-forum-hover border border-transparent'
-                      }`}
+                        }`}
                     >
                       {opt.label}
                     </button>
@@ -223,7 +221,7 @@ export default function MembersPage() {
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
                       <img
-                        src={member.avatar}
+                        src={getUserProfile(member.id).avatar || member.avatar}
                         alt={member.username}
                         className="h-10 w-10 rounded-lg object-cover border border-forum-border group-hover:border-forum-pink/30 transition-forum"
                       />
@@ -280,7 +278,6 @@ export default function MembersPage() {
 
           {/* Sidebar */}
           <div className="hidden w-[280px] flex-shrink-0 space-y-3 lg:block">
-            <UserProfileMiniCard user={currentUser} />
             <SidebarStatsPanel stats={forumStats} />
           </div>
         </div>

@@ -289,7 +289,14 @@ export function useRealtime({
                     setPostsMap((prev) => ({
                         ...prev,
                         [threadId]: (prev[threadId] || []).map(p =>
-                            p.id === payload.new.id ? { ...p, content: payload.new.content, editedAt: payload.new.edited_at, upvotes: payload.new.upvotes, downvotes: payload.new.downvotes, isAnswer: payload.new.is_answer } : p
+                            p.id === payload.new.id ? { 
+                                ...p, 
+                                content: payload.new.content, 
+                                editedAt: payload.new.edited_at, 
+                                upvotes: payload.new.upvotes, 
+                                downvotes: payload.new.downvotes, 
+                                isAnswer: payload.new.is_answer 
+                            } : p
                         ),
                     }));
                 }

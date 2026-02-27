@@ -1,6 +1,7 @@
 import { MessageSquare, UserPlus, ThumbsUp, Pin, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useForumContext } from '@/context/ForumContext';
 
 interface ActivityItem {
   id: string;
@@ -35,19 +36,20 @@ function getTimeAgo(dateString: string): string {
   const past = new Date(dateString);
   const diffMs = now.getTime() - past.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  
+
   if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins}m ago`;
-  
+
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
-  
+
   const diffDays = Math.floor(diffHours / 24);
   return `${diffDays}d ago`;
 }
 
 export default function RecentActivityFeed() {
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
+  const { getUserProfile } = useForumContext();
 
   useEffect(() => {
     const fetchRecentActivity = async () => {
@@ -79,14 +81,14 @@ export default function RecentActivityFeed() {
           for (const post of recentPosts) {
             const author = Array.isArray(post.author) ? post.author[0] : post.author;
             const thread = Array.isArray(post.thread) ? post.thread[0] : post.thread;
-            
+
             if (author && thread) {
               activities.push({
                 id: post.id,
                 type: 'reply',
                 user: {
                   username: author.username,
-                  avatar: author.avatar,
+                  avatar: author.avatar, // We will replace this with live avatar in render
                 },
                 target: thread.title.length > 30 ? thread.title.slice(0, 30) + '...' : thread.title,
                 time: getTimeAgo(post.created_at),
@@ -103,7 +105,7 @@ export default function RecentActivityFeed() {
               type: 'new_member',
               user: {
                 username: user.username,
-                avatar: user.avatar,
+                avatar: user.avatar, // We will replace this with live avatar in render
               },
               target: '',
               time: getTimeAgo(user.join_date),

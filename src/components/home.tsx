@@ -2,16 +2,13 @@ import { useState } from 'react';
 import ForumHeader from '@/components/forum/ForumHeader';
 import CategoryCardHome from '@/components/forum/CategoryCardHome';
 import SidebarStatsPanel from '@/components/forum/SidebarStatsPanel';
-import UserProfileMiniCard from '@/components/forum/UserProfileMiniCard';
 import OnlineUsers from '@/components/forum/OnlineUsers';
 import FloatingActionButton from '@/components/forum/FloatingActionButton';
 import NewThreadModal from '@/components/forum/NewThreadModal';
 import WelcomeBanner from '@/components/forum/WelcomeBanner';
 import TrendingTicker from '@/components/forum/TrendingTicker';
 import RecentActivityFeed from '@/components/forum/RecentActivityFeed';
-import Leaderboard from '@/components/forum/Leaderboard';
 import PopularTags from '@/components/forum/PopularTags';
-import ForumMilestones from '@/components/forum/ForumMilestones';
 import { useForumContext } from '@/context/ForumContext';
 import { Home as HomeIcon, ChevronRight, Github, Twitter, Heart, Code, BookOpen, Shield, Rss, Layers, Inbox } from 'lucide-react';
 import CloveLogo from '@/components/forum/CloveLogo';
@@ -109,21 +106,13 @@ function Home() {
             <div className="mt-4 lg:hidden">
               <PopularTags />
             </div>
-
-            {/* Forum Milestones (mobile) */}
-            <div className="mt-4 lg:hidden">
-              <ForumMilestones />
-            </div>
           </div>
 
           {/* Sidebar */}
           <div className="hidden w-[280px] flex-shrink-0 space-y-3 lg:block">
-            <UserProfileMiniCard user={currentUser} />
             <SidebarStatsPanel stats={forumStats} />
             <OnlineUsers />
-            <Leaderboard />
             <PopularTags />
-            <ForumMilestones />
           </div>
         </div>
       </div>
@@ -227,12 +216,9 @@ function Home() {
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div className="absolute right-0 top-0 bottom-0 w-[300px] overflow-y-auto border-l border-forum-border bg-forum-card p-4 space-y-3">
-            <UserProfileMiniCard user={currentUser} />
             <SidebarStatsPanel stats={forumStats} />
             <OnlineUsers />
-            <Leaderboard />
             <PopularTags />
-            <ForumMilestones />
           </div>
         </div>
       )}

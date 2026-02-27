@@ -17,12 +17,14 @@ import {
 import ForumHeader from '@/components/forum/ForumHeader';
 import MobileBottomNav from '@/components/forum/MobileBottomNav';
 import { supabase } from '@/lib/supabase';
+import { useForumContext } from '@/context/ForumContext';
 
 interface SearchResult {
     id: string;
     type: 'thread' | 'post' | 'user';
     title: string;
     excerpt: string;
+    authorId?: string;
     author?: string;
     authorAvatar?: string;
     categoryName?: string;
@@ -46,6 +48,7 @@ export default function SearchPage() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [sortBy, setSortBy] = useState<'relevance' | 'date' | 'views'>('relevance');
     const inputRef = useRef<HTMLInputElement>(null);
+    const { getUserProfile } = useForumContext();
 
     useEffect(() => {
         if (initialQuery) {
@@ -72,7 +75,7 @@ export default function SearchPage() {
                 const { data: threads } = await supabase
                     .from('threads')
                     .select(`
-            id, title, excerpt, created_at, reply_count, view_count,
+            id, title, excerpt, created_at, reply_count, view_count, author_id,
             author:forum_users!threads_author_id_fkey(username, avatar),
             category:categories!threads_category_id_fkey(name)
           `)
@@ -89,6 +92,7 @@ export default function SearchPage() {
                             type: 'thread',
                             title: t.title,
                             excerpt: t.excerpt || '',
+                            authorId: t.author_id,
                             author: (author as any)?.username || 'Unknown',
                             authorAvatar: (author as any)?.avatar,
                             categoryName: (category as any)?.name,
@@ -105,7 +109,7 @@ export default function SearchPage() {
                 const { data: posts } = await supabase
                     .from('posts')
                     .select(`
-            id, content, created_at, thread_id,
+            id, content, created_at, thread_id, author_id,
             author:forum_users!posts_author_id_fkey(username, avatar),
             thread:threads!posts_thread_id_fkey(title)
           `)
@@ -122,6 +126,7 @@ export default function SearchPage() {
                             type: 'post',
                             title: (thread as any)?.title || 'Post',
                             excerpt: p.content.substring(0, 200),
+                            authorId: p.author_id,
                             author: (author as any)?.username || 'Unknown',
                             authorAvatar: (author as any)?.avatar,
                             createdAt: p.created_at,
@@ -146,6 +151,7 @@ export default function SearchPage() {
                             type: 'user',
                             title: u.username,
                             excerpt: `${u.post_count} posts · ${u.reputation} reputation`,
+                            authorId: u.id,
                             authorAvatar: u.avatar,
                             createdAt: u.join_date,
                             link: `/user/${u.id}`,
@@ -252,8 +258,8 @@ export default function SearchPage() {
                                 key={tab.key}
                                 onClick={() => handleTabChange(tab.key)}
                                 className={`transition-forum flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-mono font-medium ${activeTab === tab.key
-                                        ? 'bg-forum-pink/10 text-forum-pink border border-forum-pink/20'
-                                        : 'text-forum-muted hover:text-forum-text hover:bg-forum-hover'
+                                    ? 'bg-forum-pink/10 text-forum-pink border border-forum-pink/20'
+                                    : 'text-forum-muted hover:text-forum-text hover:bg-forum-hover'
                                     }`}
                             >
                                 <tab.icon size={12} />
@@ -291,11 +297,12 @@ export default function SearchPage() {
                                 className="transition-forum w-full text-left hud-panel p-4 hover:border-forum-pink/30 hover:bg-forum-pink/[0.02] group"
                             >
                                 <div className="flex items-start gap-3">
-                                    {result.type === 'user' && result.authorAvatar ? (
+                                    {result.type === 'user' || result.authorAvatar ? (
                                         <img
-                                            src={result.authorAvatar}
+                                            src={result.authorId ? getUserProfile(result.authorId).avatar || result.authorAvatar : result.authorAvatar}
                                             alt={result.title}
-                                            className="h-10 w-10 rounded-md border border-forum-border object-cover flex-shrink-0"
+                                            className="h-10 w-10 border border-forum-border object-cover flex-shrink-0"
+                                            style={{ borderRadius: result.type === 'user' ? '0.375rem' : '4px' }}
                                         />
                                     ) : (
                                         <div className="h-10 w-10 rounded-md border border-forum-border/30 bg-forum-bg flex items-center justify-center flex-shrink-0">

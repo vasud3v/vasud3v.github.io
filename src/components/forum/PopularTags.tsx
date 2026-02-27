@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Hash, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -9,6 +10,7 @@ interface Tag {
 }
 
 export default function PopularTags() {
+  const navigate = useNavigate();
   const [popularTags, setPopularTags] = useState<Tag[]>([]);
 
   useEffect(() => {
@@ -83,7 +85,13 @@ export default function PopularTags() {
             {popularTags.map((tag) => (
               <button
                 key={tag.name}
-                className={`group transition-forum flex items-center gap-1 rounded-sm px-2 py-[3px] text-[9px] font-mono hover:bg-forum-pink/10 hover:text-forum-pink hover:border-forum-pink/30 hover:shadow-[0_0_8px_rgba(255,45,146,0.15)] ${
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  console.log('Tag clicked:', tag.name);
+                  navigate(`/search?q=${encodeURIComponent(tag.name)}`);
+                }}
+                className={`group transition-forum flex items-center gap-1 rounded-sm px-2 py-[3px] text-[9px] font-mono hover:bg-forum-pink/10 hover:text-forum-pink hover:border-forum-pink/30 hover:shadow-[0_0_8px_rgba(255,45,146,0.15)] cursor-pointer active:scale-95 ${
                   tag.hot
                     ? 'bg-gradient-to-r from-forum-pink/10 to-forum-pink/[0.03] border border-forum-pink/25 text-forum-pink/80'
                     : 'bg-forum-bg/50 border border-forum-border text-forum-muted'

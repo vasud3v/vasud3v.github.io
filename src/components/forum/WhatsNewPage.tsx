@@ -5,7 +5,6 @@ import ThreadRow from '@/components/forum/ThreadRow';
 import SortControls from '@/components/forum/SortControls';
 import ForumPagination from '@/components/forum/ForumPagination';
 import SidebarStatsPanel from '@/components/forum/SidebarStatsPanel';
-import UserProfileMiniCard from '@/components/forum/UserProfileMiniCard';
 import OnlineUsers from '@/components/forum/OnlineUsers';
 import PopularTags from '@/components/forum/PopularTags';
 import FloatingActionButton from '@/components/forum/FloatingActionButton';
@@ -227,7 +226,6 @@ export default function WhatsNewPage() {
 
           {/* Sidebar */}
           <div className="hidden w-[280px] flex-shrink-0 space-y-3 lg:block">
-            <UserProfileMiniCard user={currentUser} />
             <SidebarStatsPanel stats={forumStats} />
             <OnlineUsers />
             <PopularTags />

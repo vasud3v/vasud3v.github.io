@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { PollData, User } from '@/types/forum';
 import { supabase, ForumError, handleSupabaseError } from '@/lib/supabase';
-import { fetchPollForThread } from '@/lib/forumDataFetchers';
+import { fetchPollForThread } from '@/lib/forumDataFetchersOptimized';
 
 interface UsePollsParams {
     currentUser: User;

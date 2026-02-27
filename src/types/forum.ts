@@ -309,3 +309,15 @@ export interface UserWarning {
 
 export type SortOption = 'latest' | 'views' | 'replies';
 export type FilterOption = 'all' | 'trending' | 'unanswered' | 'my-threads';
+
+// ============================================================================
+// Threaded Replies (Phase 5)
+// ============================================================================
+
+export interface ThreadedPost {
+  post: PostData;
+  children: ThreadedPost[];
+  depth: number;
+}
+
+export type ThreadViewMode = 'flat' | 'threaded';

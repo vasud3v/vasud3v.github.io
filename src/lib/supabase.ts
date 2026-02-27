@@ -32,7 +32,7 @@ export const supabase = createClient<Database>(
   {
     realtime: {
       params: {
-        eventsPerSecond: 10, // Rate limiting for real-time events
+        eventsPerSecond: 50, // Increased from 10 for better performance
       },
     },
   }

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import ForumHeader from '@/components/forum/ForumHeader';
 import ForumRules from '@/components/forum/ForumRules';
 import SidebarStatsPanel from '@/components/forum/SidebarStatsPanel';
-import UserProfileMiniCard from '@/components/forum/UserProfileMiniCard';
 import OnlineUsers from '@/components/forum/OnlineUsers';
 import FloatingActionButton from '@/components/forum/FloatingActionButton';
 import NewThreadModal from '@/components/forum/NewThreadModal';
@@ -65,7 +64,6 @@ export default function ForumRulesPage() {
 
           {/* Sidebar */}
           <div className="hidden w-[280px] flex-shrink-0 space-y-3 lg:block">
-            <UserProfileMiniCard user={currentUser} />
             <SidebarStatsPanel stats={forumStats} />
             <OnlineUsers />
           </div>
