@@ -50,45 +50,49 @@ export default function ThreadHeader({
   return (
     <>
       <div className="hud-panel overflow-hidden">
-        {/* Banner Image */}
-        {thread.banner && !bannerError && (
-          <div className="relative h-48 overflow-hidden bg-gradient-to-br from-forum-bg via-forum-card to-forum-bg">
-            <img
-              src={thread.banner}
-              alt="Thread banner"
-              className="w-full h-full object-cover object-center"
-              style={{ objectPosition: 'center 35%' }}
-              onError={(e) => {
-                console.error('Banner image failed to load:', thread.banner);
-                setBannerError(true);
-                e.currentTarget.style.display = 'none';
-              }}
-              onLoad={() => console.log('Banner loaded successfully:', thread.banner)}
-            />
-            {/* Subtle vignette effect for professional look */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/20 pointer-events-none" />
-          </div>
-        )}
-        
-        {/* Fallback when banner fails to load */}
-        {thread.banner && bannerError && (
-          <div className="relative w-full h-48 bg-gradient-to-br from-forum-card via-forum-bg to-forum-card border-b border-forum-border/30">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center text-forum-muted/40">
-                <div className="text-[10px] font-mono mb-1">Banner unavailable</div>
-                {isAuthor && isSupabaseStorageBanner && (
-                  <div className="text-[9px] font-mono text-forum-pink/60">
-                    Click "Edit" to upload a new banner
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        
+        {/* Banner with overlaid content */}
         <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-forum-card to-forum-bg/50" />
-          <div className="relative px-5 py-5">
+          {/* Banner Image Background */}
+          {thread.banner && !bannerError ? (
+            <>
+              <div className="absolute inset-0 h-64 overflow-hidden">
+                <img
+                  src={thread.banner}
+                  alt="Thread banner"
+                  className="w-full h-full object-cover object-center"
+                  style={{ objectPosition: 'center 35%' }}
+                  onError={(e) => {
+                    console.error('Banner image failed to load:', thread.banner);
+                    setBannerError(true);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                  onLoad={() => console.log('Banner loaded successfully:', thread.banner)}
+                />
+              </div>
+              {/* Dark gradient overlay for text readability */}
+              <div className="absolute inset-0 h-64 bg-gradient-to-b from-black/40 via-black/50 to-forum-card pointer-events-none" />
+            </>
+          ) : thread.banner && bannerError ? (
+            <>
+              <div className="absolute inset-0 h-64 bg-gradient-to-br from-forum-card via-forum-bg to-forum-card" />
+              <div className="absolute inset-0 h-64 flex items-center justify-center">
+                <div className="text-center text-forum-muted/40">
+                  <div className="text-[10px] font-mono mb-1">Banner unavailable</div>
+                  {isAuthor && isSupabaseStorageBanner && (
+                    <div className="text-[9px] font-mono text-forum-pink/60">
+                      Click "Edit" to upload a new banner
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* No banner - show gradient background */
+            <div className="absolute inset-0 h-64 bg-gradient-to-br from-forum-card via-forum-bg to-forum-card" />
+          )}
+          
+          {/* Content overlaid on banner */}
+          <div className="relative px-5 py-5 min-h-[16rem]">
             {/* Badges */}
             <div className="flex items-center gap-2 flex-wrap mb-3">
               {thread.isPinned && (
