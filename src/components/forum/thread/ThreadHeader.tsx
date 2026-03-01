@@ -91,8 +91,8 @@ export default function ThreadHeader({
             <div className="absolute inset-0 h-64 bg-gradient-to-br from-forum-card via-forum-bg to-forum-card" />
           )}
           
-          {/* Content overlaid on banner */}
-          <div className="relative px-5 py-5 min-h-[16rem]">
+          {/* Content overlaid on banner - positioned at bottom */}
+          <div className="relative px-5 py-5 min-h-[16rem] flex flex-col justify-end">
             {/* Badges */}
             <div className="flex items-center gap-2 flex-wrap mb-3" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               {thread.isPinned && (
