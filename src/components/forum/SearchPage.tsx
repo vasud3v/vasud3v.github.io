@@ -13,11 +13,14 @@ import {
     Home as HomeIcon,
     Loader2,
     Inbox,
+    X,
+    Trash2,
 } from 'lucide-react';
 import ForumHeader from '@/components/forum/ForumHeader';
 import MobileBottomNav from '@/components/forum/MobileBottomNav';
 import { supabase } from '@/lib/supabase';
 import { useForumContext } from '@/context/ForumContext';
+import { useSearch } from '@/hooks/useSearch';
 
 interface SearchResult {
     id: string;
@@ -34,14 +37,33 @@ interface SearchResult {
     link: string;
 }
 
+// Highlight matching text with a styled <mark>
+function HighlightText({ text, query }: { text: string; query: string }) {
+    if (!query.trim() || !text) return <>{text}</>;
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    const parts = text.split(regex);
+    return (
+        <>
+            {parts.map((part, i) =>
+                part.toLowerCase() === query.toLowerCase() ? (
+                    <mark key={i} className="bg-forum-pink/20 text-forum-pink rounded-sm px-0.5">
+                        {part}
+                    </mark>
+                ) : (
+                    <span key={i}>{part}</span>
+                )
+            )}
+        </>
+    );
+}
+
 export default function SearchPage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const searchParams = new URLSearchParams(location.search);
-    const initialQuery = searchParams.get('q') || '';
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [pageSearchQuery, setPageSearchQuery] = useState(initialQuery);
+    const [pageSearchQuery, setPageSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'threads' | 'posts' | 'users'>('threads');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -49,19 +71,29 @@ export default function SearchPage() {
     const [sortBy, setSortBy] = useState<'relevance' | 'date' | 'views'>('relevance');
     const inputRef = useRef<HTMLInputElement>(null);
     const { getUserProfile } = useForumContext();
+    const { recentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches } = useSearch();
+    const hasInitRef = useRef(false);
 
-    useEffect(() => {
-        if (initialQuery) {
-            setPageSearchQuery(initialQuery);
-            performSearch(initialQuery, activeTab);
-        }
-    }, []);
-
+    // Auto-focus on mount
     useEffect(() => {
         inputRef.current?.focus();
     }, []);
 
-    const performSearch = async (query: string, tab: string) => {
+    // Sync from URL query params (handles both initial load and header search navigation)
+    useEffect(() => {
+        const urlQuery = new URLSearchParams(location.search).get('q') || '';
+        if (urlQuery) {
+            setPageSearchQuery(urlQuery);
+            performSearchFn(urlQuery, activeTab);
+        } else if (hasInitRef.current) {
+            // Only clear if not first render
+            setPageSearchQuery('');
+            setResults([]);
+        }
+        hasInitRef.current = true;
+    }, [location.search]);
+
+    const performSearchFn = async (query: string, tab: string) => {
         if (!query.trim()) {
             setResults([]);
             return;
@@ -178,20 +210,25 @@ export default function SearchPage() {
     const handleSearchSubmit = (e?: React.FormEvent) => {
         e?.preventDefault();
         if (pageSearchQuery.trim()) {
+            addRecentSearch(pageSearchQuery.trim());
             navigate(`/search?q=${encodeURIComponent(pageSearchQuery)}`);
-            performSearch(pageSearchQuery, activeTab);
+            performSearchFn(pageSearchQuery, activeTab);
         }
     };
 
     const handleTabChange = (tab: 'threads' | 'posts' | 'users') => {
         setActiveTab(tab);
         if (pageSearchQuery.trim()) {
-            performSearch(pageSearchQuery, tab);
+            performSearchFn(pageSearchQuery, tab);
         }
     };
 
     const formatTimeAgo = (dateStr: string) => {
-        const diff = Date.now() - new Date(dateStr).getTime();
+        if (!dateStr) return '';
+        const time = new Date(dateStr).getTime();
+        if (isNaN(time)) return '';
+        const diff = Date.now() - time;
+        if (diff < 0) return 'just now';
         const minutes = Math.floor(diff / 60000);
         if (minutes < 60) return `${minutes}m ago`;
         const hours = Math.floor(minutes / 60);
@@ -205,6 +242,8 @@ export default function SearchPage() {
         { key: 'posts' as const, label: 'Posts', icon: MessageCircle },
         { key: 'users' as const, label: 'Users', icon: User },
     ];
+
+    const showRecentSearches = !pageSearchQuery.trim() && recentSearches.length > 0;
 
     return (
         <div className="min-h-screen bg-forum-bg pb-20 lg:pb-0">
@@ -245,10 +284,67 @@ export default function SearchPage() {
                             placeholder="Search threads, posts, users..."
                             value={pageSearchQuery}
                             onChange={(e) => setPageSearchQuery(e.target.value)}
-                            className="transition-forum w-full rounded-md border border-forum-border bg-forum-bg py-3 pl-11 pr-4 text-[13px] font-mono text-forum-text placeholder-forum-muted outline-none focus:border-forum-pink focus:shadow-pink-glow focus:ring-1 focus:ring-forum-pink/30"
+                            className="transition-forum w-full rounded-md border border-forum-border bg-forum-bg py-3 pl-11 pr-10 text-[13px] font-mono text-forum-text placeholder-forum-muted outline-none focus:border-forum-pink focus:shadow-pink-glow focus:ring-1 focus:ring-forum-pink/30"
                         />
+                        {pageSearchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPageSearchQuery('');
+                                    setResults([]);
+                                    inputRef.current?.focus();
+                                }}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-forum-muted hover:text-forum-pink transition-forum"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
                     </form>
                 </div>
+
+                {/* Recent Searches (when query is empty) */}
+                {showRecentSearches && (
+                    <div className="hud-panel p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-forum-muted flex items-center gap-1.5">
+                                <Clock size={11} className="text-forum-pink/60" />
+                                Recent Searches
+                            </span>
+                            <button
+                                onClick={clearRecentSearches}
+                                className="text-[9px] font-mono text-forum-muted hover:text-forum-pink transition-forum flex items-center gap-1"
+                            >
+                                <Trash2 size={9} />
+                                Clear all
+                            </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {recentSearches.map((term) => (
+                                <button
+                                    key={term}
+                                    onClick={() => {
+                                        setPageSearchQuery(term);
+                                        navigate(`/search?q=${encodeURIComponent(term)}`);
+                                        performSearchFn(term, activeTab);
+                                    }}
+                                    className="group flex items-center gap-1.5 rounded-md border border-forum-border/40 bg-forum-bg px-3 py-1.5 text-[11px] font-mono text-forum-text hover:border-forum-pink/30 hover:bg-forum-pink/5 hover:text-forum-pink transition-forum"
+                                >
+                                    <Clock size={10} className="text-forum-muted" />
+                                    {term}
+                                    <span
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeRecentSearch(term);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 hover:text-red-400"
+                                    >
+                                        <X size={9} />
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Tabs + Filters */}
                 <div className="flex items-center justify-between">
@@ -269,11 +365,13 @@ export default function SearchPage() {
                     </div>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={() =>
-                                setSortBy((prev) =>
-                                    prev === 'relevance' ? 'date' : prev === 'date' ? 'views' : 'relevance'
-                                )
-                            }
+                            onClick={() => {
+                                const next = sortBy === 'relevance' ? 'date' : sortBy === 'date' ? 'views' : 'relevance';
+                                setSortBy(next);
+                                if (pageSearchQuery.trim()) {
+                                    performSearchFn(pageSearchQuery, activeTab);
+                                }
+                            }}
                             className="transition-forum flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-mono text-forum-muted hover:text-forum-pink border border-forum-border/30 hover:border-forum-pink/30"
                         >
                             <ArrowUpDown size={10} />
@@ -325,11 +423,11 @@ export default function SearchPage() {
                                             )}
                                         </div>
                                         <h3 className="text-[13px] font-mono font-semibold text-forum-text group-hover:text-forum-pink truncate">
-                                            {result.title}
+                                            <HighlightText text={result.title} query={pageSearchQuery} />
                                         </h3>
                                         {result.excerpt && (
                                             <p className="text-[11px] font-mono text-forum-muted line-clamp-2 mt-1">
-                                                {result.excerpt}
+                                                <HighlightText text={result.excerpt} query={pageSearchQuery} />
                                             </p>
                                         )}
                                         <div className="flex items-center gap-3 mt-2 text-[9px] font-mono text-forum-muted">
@@ -366,7 +464,7 @@ export default function SearchPage() {
                                 Try a different search query or switch tabs
                             </p>
                         </div>
-                    ) : (
+                    ) : !showRecentSearches ? (
                         <div className="hud-panel flex flex-col items-center justify-center py-16">
                             <Search size={40} className="text-forum-pink/20 mb-3" />
                             <h3 className="text-[13px] font-bold text-forum-text font-mono mb-1">
@@ -376,7 +474,7 @@ export default function SearchPage() {
                                 Enter a query above to search threads, posts, and users
                             </p>
                         </div>
-                    )}
+                    ) : null}
                 </div>
 
                 {/* Result count */}

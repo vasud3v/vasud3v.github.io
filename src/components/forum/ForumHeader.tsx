@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Menu, X, Home, MessageSquare, Users, HelpCircle, LogIn, LogOut, Shield, BarChart3, Bookmark, Bell, Mail, UserPlus, LifeBuoy } from 'lucide-react';
 import CloveLogo from '@/components/forum/CloveLogo';
 import NotificationCenter from '@/components/forum/NotificationCenter';
 import RoleBadge from '@/components/forum/RoleBadge';
+import SearchDropdown from '@/components/forum/SearchDropdown';
 import { useAuth } from '@/context/AuthContext';
 import { useForumContext } from '@/context/ForumContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useSearch } from '@/hooks/useSearch';
 
 interface ForumHeaderProps {
   searchQuery: string;
@@ -25,11 +28,55 @@ export default function ForumHeader({
   const { isAuthenticated, user, signOut } = useAuth();
   const { currentUser } = useForumContext();
   const { isStaff } = usePermissions();
+  const {
+    query: liveQuery,
+    setQuery: setLiveQuery,
+    results: liveResults,
+    isLoading: liveLoading,
+    recentSearches,
+    addRecentSearch,
+    removeRecentSearch,
+    clearRecentSearches,
+  } = useSearch();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dropdownActiveIndex, setDropdownActiveIndex] = useState(-1);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    // Don't handle Enter here if dropdown has an active keyboard selection
+    if (e.key === 'Enter' && liveQuery.trim() && dropdownActiveIndex < 0) {
+      addRecentSearch(liveQuery.trim());
+      setIsDropdownOpen(false);
+      navigate(`/search?q=${encodeURIComponent(liveQuery.trim())}`);
     }
+  };
+
+  const handleSearchChange = (value: string) => {
+    setLiveQuery(value);
+    onSearchChange(value);
+    if (!isDropdownOpen) setIsDropdownOpen(true);
+  };
+
+  const handleFocus = () => {
+    setIsDropdownOpen(true);
+  };
+
+  const handleSelectResult = (link: string) => {
+    if (liveQuery.trim()) addRecentSearch(liveQuery.trim());
+    setIsDropdownOpen(false);
+    navigate(link);
+  };
+
+  const handleRecentClick = (term: string) => {
+    setLiveQuery(term);
+    onSearchChange(term);
+    setIsDropdownOpen(false);
+    navigate(`/search?q=${encodeURIComponent(term)}`);
+  };
+
+  const handleViewAll = () => {
+    if (liveQuery.trim()) addRecentSearch(liveQuery.trim());
+    setIsDropdownOpen(false);
+    navigate(`/search?q=${encodeURIComponent(liveQuery.trim())}`);
   };
 
   const navLinks = [
@@ -73,8 +120,8 @@ export default function ForumHeader({
             </div>
           </div>
 
-          {/* Search */}
-          <div className="hidden flex-1 max-w-md mx-8 md:block">
+          {/* Search with Dropdown */}
+          <div className="hidden flex-1 max-w-md mx-8 md:block relative">
             <div className="relative">
               <Search
                 size={14}
@@ -83,12 +130,39 @@ export default function ForumHeader({
               <input
                 type="text"
                 placeholder="Search threads, posts, users..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
+                value={liveQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
+                onFocus={handleFocus}
                 className="transition-forum w-full rounded-md border border-forum-border bg-forum-bg py-2 pl-9 pr-4 text-[12px] font-mono text-forum-text placeholder-forum-muted outline-none focus:border-forum-pink focus:shadow-pink-glow focus:ring-1 focus:ring-forum-pink/30"
               />
+              {liveQuery && (
+                <button
+                  onClick={() => {
+                    setLiveQuery('');
+                    onSearchChange('');
+                    setIsDropdownOpen(false);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-forum-muted hover:text-forum-pink transition-forum"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
+            <SearchDropdown
+              isOpen={isDropdownOpen}
+              query={liveQuery}
+              results={liveResults}
+              isLoading={liveLoading}
+              recentSearches={recentSearches}
+              onClose={() => setIsDropdownOpen(false)}
+              onSelectResult={handleSelectResult}
+              onRecentClick={handleRecentClick}
+              onRemoveRecent={removeRecentSearch}
+              onClearRecent={clearRecentSearches}
+              onViewAll={handleViewAll}
+              onActiveIndexChange={setDropdownActiveIndex}
+            />
           </div>
 
           {/* Right side */}
