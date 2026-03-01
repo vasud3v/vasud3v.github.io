@@ -197,10 +197,12 @@ export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: N
         setSelectedTopic('');
         setContent('');
         setTagsInput('');
+        setThumbnail('');
         setErrors({});
         onClose();
-        // Navigate to the new thread
+        // Navigate to the new thread and reload to show updated data
         navigate(`/thread/${newThread.id}`);
+        window.location.reload();
       }, 800);
     } catch (error: any) {
       // Handle specific error types
