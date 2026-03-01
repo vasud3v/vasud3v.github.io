@@ -70,7 +70,7 @@ export default function ThreadHeader({
                 />
               </div>
               {/* Dark gradient overlay for text readability */}
-              <div className="absolute inset-0 h-64 bg-gradient-to-b from-black/40 via-black/50 to-forum-card pointer-events-none" />
+              <div className="absolute inset-0 h-64 bg-gradient-to-b from-black/60 via-black/70 to-forum-card pointer-events-none" />
             </>
           ) : thread.banner && bannerError ? (
             <>
@@ -94,7 +94,7 @@ export default function ThreadHeader({
           {/* Content overlaid on banner */}
           <div className="relative px-5 py-5 min-h-[16rem]">
             {/* Badges */}
-            <div className="flex items-center gap-2 flex-wrap mb-3">
+            <div className="flex items-center gap-2 flex-wrap mb-3" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               {thread.isPinned && (
                 <span className="badge-shine inline-flex items-center gap-1.5 rounded-sm bg-gradient-to-r from-forum-pink/20 to-forum-pink/10 border border-forum-pink/40 px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-forum-pink badge-glow-pink">
                   <Pin size={11} className="drop-shadow-[0_0_3px_rgba(255,45,146,0.6)]" />
@@ -130,12 +130,12 @@ export default function ThreadHeader({
             </div>
 
           {/* Title */}
-          <h1 className="text-[20px] font-bold text-forum-text font-mono leading-tight mb-3">
+          <h1 className="text-[20px] font-bold text-forum-text font-mono leading-tight mb-3 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
             {thread.title}
           </h1>
 
           {/* Thread meta */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
             <div className="flex items-center gap-2">
               <img
                 src={getUserProfile(thread.author.id).avatar || thread.author.avatar}
@@ -163,7 +163,7 @@ export default function ThreadHeader({
           </div>
 
           {/* Stats bar */}
-          <div className="mt-4 flex items-center gap-4 flex-wrap">
+          <div className="mt-4 flex items-center gap-4 flex-wrap drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
             <div className="flex items-center gap-1.5 text-[10px] font-mono text-forum-muted">
               <Eye size={11} className="text-forum-muted/60" />
               <span className="font-semibold text-forum-text">
