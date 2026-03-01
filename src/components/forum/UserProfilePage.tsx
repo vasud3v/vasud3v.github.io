@@ -509,6 +509,10 @@ export default function UserProfilePage() {
                     src={currentBanner}
                     alt="Profile banner"
                     className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Profile banner failed to load:', currentBanner);
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 ) : (
                   <>

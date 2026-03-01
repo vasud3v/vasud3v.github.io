@@ -14,7 +14,7 @@ interface EditThreadModalProps {
 export default function EditThreadModal({ isOpen, onClose, threadId }: EditThreadModalProps) {
   const { getThread } = useForumContext();
   const thread = getThread(threadId);
-  
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
@@ -127,7 +127,7 @@ export default function EditThreadModal({ isOpen, onClose, threadId }: EditThrea
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-forum-card border border-forum-border rounded-lg shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-forum-border bg-forum-card px-6 py-4">
@@ -188,13 +188,17 @@ export default function EditThreadModal({ isOpen, onClose, threadId }: EditThrea
             <label className="block text-[11px] font-mono font-semibold text-forum-text mb-2 uppercase tracking-wider">
               Thread Banner
             </label>
-            
+
             {banner ? (
               <div className="relative group">
                 <img
                   src={banner}
                   alt="Thread banner"
-                  className="w-full h-48 object-cover rounded-lg border border-forum-border"
+                  className="w-full h-48 object-cover rounded-lg border border-forum-border bg-forum-bg"
+                  onError={() => {
+                    toast.error('Failed to load banner image');
+                    setBanner('');
+                  }}
                 />
                 <button
                   onClick={handleRemoveBanner}

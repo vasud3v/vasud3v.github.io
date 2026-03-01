@@ -16,7 +16,7 @@ export default function CreateThreadPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { categories } = useForumContext();
-  
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const selectedCategory = searchParams.get('category') || '';
@@ -96,10 +96,10 @@ export default function CreateThreadPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Comprehensive validation
     const validation = validateThreadCreation(title, content, selectedCategory, tags);
-    
+
     if (!validation.isValid) {
       const firstError = validation.errors[0];
       toast.error(firstError.message);
@@ -123,7 +123,7 @@ export default function CreateThreadPage() {
     try {
       // Create thread
       const threadId = `thread-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      
+
       const { error: threadError } = await supabase.from('threads').insert({
         id: threadId,
         title: title.trim(),
@@ -150,7 +150,7 @@ export default function CreateThreadPage() {
 
       // Create first post
       const postId = `post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      
+
       const { error: postError } = await supabase.from('posts').insert({
         id: postId,
         thread_id: threadId,
@@ -192,7 +192,7 @@ export default function CreateThreadPage() {
     <div className="min-h-screen bg-forum-bg pb-20 lg:pb-0">
       <ForumHeader
         searchQuery=""
-        onSearchChange={() => {}}
+        onSearchChange={() => { }}
         onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         isMobileMenuOpen={isMobileMenuOpen}
       />
@@ -309,9 +309,9 @@ export default function CreateThreadPage() {
               </label>
               <div className="flex items-center gap-3">
                 {thumbnail && (
-                  <img 
-                    src={thumbnail} 
-                    alt="Thread thumbnail" 
+                  <img
+                    src={thumbnail}
+                    alt="Thread thumbnail"
                     className="h-16 w-16 rounded-md object-cover border border-zinc-700"
                   />
                 )}
@@ -343,10 +343,14 @@ export default function CreateThreadPage() {
               </label>
               <div className="space-y-3">
                 {banner && (
-                  <img 
-                    src={banner} 
-                    alt="Thread banner" 
+                  <img
+                    src={banner}
+                    alt="Thread banner"
                     className="w-full h-32 rounded-md object-cover border border-zinc-700"
+                    onError={() => {
+                      toast.error('Failed to load banner image');
+                      setBanner('');
+                    }}
                   />
                 )}
                 <div className="flex items-center gap-3">

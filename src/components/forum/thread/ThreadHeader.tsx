@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Pin, Lock, Flame, Eye, MessageCircle, Clock,
@@ -30,6 +30,11 @@ export default function ThreadHeader({
   const { getUserProfile, currentUser } = useForumContext();
   const isSolved = thread.tags?.some((t) => t.toLowerCase() === 'solved');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [bannerError, setBannerError] = useState(false);
+
+  useEffect(() => {
+    setBannerError(false);
+  }, [thread.banner]);
   
   // Check if current user is the thread author
   const isAuthor = currentUser.id === thread.author.id;
@@ -38,18 +43,31 @@ export default function ThreadHeader({
     <>
       <div className="hud-panel overflow-hidden">
         {/* Banner Image */}
-        {thread.banner && (
+        {thread.banner && !bannerError && (
           <div className="relative h-48 overflow-hidden bg-forum-bg">
             <img
               src={thread.banner}
               alt="Thread banner"
               className="w-full h-full object-cover"
               onError={(e) => {
-                // Hide banner if image fails to load
-                e.currentTarget.parentElement!.style.display = 'none';
+                console.error('Banner image failed to load:', thread.banner);
+                setBannerError(true);
+                e.currentTarget.style.display = 'none';
               }}
+              onLoad={() => console.log('Banner loaded successfully:', thread.banner)}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-forum-card" />
+          </div>
+        )}
+        
+        {/* Fallback when banner fails to load */}
+        {thread.banner && bannerError && (
+          <div className="relative h-48 overflow-hidden bg-gradient-to-br from-forum-card via-forum-bg to-forum-card border-b border-forum-border/30">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center text-forum-muted/40">
+                <div className="text-[10px] font-mono">Banner unavailable</div>
+              </div>
+            </div>
           </div>
         )}
         

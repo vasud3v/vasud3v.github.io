@@ -88,6 +88,10 @@ export default function UserProfileMiniCard({ user }: UserProfileMiniCardProps) 
               src={displayBanner}
               alt="Profile banner"
               className="absolute inset-0 w-full h-full object-cover"
+              onError={(e) => {
+                console.error('Mini card banner failed to load:', displayBanner);
+                e.currentTarget.style.display = 'none';
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-forum-card/30" />
           </>
