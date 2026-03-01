@@ -6,6 +6,7 @@ import {
   Flame,
   CheckCircle2,
   Shield,
+  MessageSquare,
 } from 'lucide-react';
 import { Thread } from '@/types/forum';
 import { useForumContext } from '@/context/ForumContext';
@@ -54,18 +55,24 @@ export default function ThreadRow({ thread }: ThreadRowProps) {
       <div className="flex items-center gap-3 px-3 py-2.5">
         {/* Thread Thumbnail - 75x50 */}
         <div className="relative flex-shrink-0">
-          <img
-            src={thread.thumbnail || displayAvatar}
-            alt={thread.title}
-            className="w-[75px] h-[50px] rounded object-cover border border-forum-border/40"
-            style={{
-              backgroundColor: '#1a1a1a'
-            }}
-            onError={(e) => {
-              // Fallback to avatar if thumbnail fails
-              e.currentTarget.src = displayAvatar;
-            }}
-          />
+          {thread.thumbnail ? (
+            <img
+              src={thread.thumbnail}
+              alt={thread.title}
+              className="w-[75px] h-[50px] rounded object-cover border border-forum-border/40"
+              style={{
+                backgroundColor: '#1a1a1a'
+              }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : (
+            /* Placeholder when no thumbnail */
+            <div className="w-[75px] h-[50px] rounded border border-forum-border/40 bg-gradient-to-br from-forum-card via-forum-bg to-forum-card flex items-center justify-center">
+              <MessageSquare size={20} className="text-forum-muted/30" />
+            </div>
+          )}
           {thread.hasUnread && (
             <div className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-forum-pink" />
           )}
