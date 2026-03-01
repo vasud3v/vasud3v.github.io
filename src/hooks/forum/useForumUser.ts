@@ -89,17 +89,53 @@ export function useForumUser() {
                     if (!cancelled) {
                         const data = payload.new as any;
                         console.log('[useForumUser] Received realtime update:', data.username);
-                        setForumUser({
-                            id: data.id,
-                            username: data.username,
-                            avatar: data.avatar,
-                            banner: data.banner || undefined,
-                            postCount: data.post_count,
-                            reputation: data.reputation,
-                            joinDate: data.join_date,
-                            isOnline: data.is_online,
-                            rank: data.rank || 'Newcomer',
-                            role: (data.role as UserRole) || 'member',
+                        
+                        // Only update if data actually changed to prevent infinite loops
+                        setForumUser(prev => {
+                            // If no previous data, always update
+                            if (!prev) {
+                                return {
+                                    id: data.id,
+                                    username: data.username,
+                                    avatar: data.avatar,
+                                    banner: data.banner || undefined,
+                                    postCount: data.post_count,
+                                    reputation: data.reputation,
+                                    joinDate: data.join_date,
+                                    isOnline: data.is_online,
+                                    rank: data.rank || 'Newcomer',
+                                    role: (data.role as UserRole) || 'member',
+                                };
+                            }
+                            
+                            // Check if anything actually changed
+                            const hasChanges = 
+                                prev.username !== data.username ||
+                                prev.avatar !== data.avatar ||
+                                prev.banner !== (data.banner || undefined) ||
+                                prev.postCount !== data.post_count ||
+                                prev.reputation !== data.reputation ||
+                                prev.isOnline !== data.is_online ||
+                                prev.rank !== (data.rank || 'Newcomer') ||
+                                prev.role !== ((data.role as UserRole) || 'member');
+                            
+                            if (!hasChanges) {
+                                console.log('[useForumUser] No changes detected, skipping update');
+                                return prev;
+                            }
+                            
+                            return {
+                                id: data.id,
+                                username: data.username,
+                                avatar: data.avatar,
+                                banner: data.banner || undefined,
+                                postCount: data.post_count,
+                                reputation: data.reputation,
+                                joinDate: data.join_date,
+                                isOnline: data.is_online,
+                                rank: data.rank || 'Newcomer',
+                                role: (data.role as UserRole) || 'member',
+                            };
                         });
                     }
                 }
@@ -165,16 +201,16 @@ export function useForumUser() {
         })();
     }, [isAuthenticated, authUser?.id]);
 
-    // Load current user's page size preference
+    // Load current user's page size preference (only once on auth)
     useEffect(() => {
-        if (!isAuthenticated || !currentUser?.id) return;
+        if (!isAuthenticated || !authUserId) return;
 
         (async () => {
             try {
                 const { data, error } = await supabase
                     .from('profile_customizations')
                     .select('page_size')
-                    .eq('user_id', currentUser.id)
+                    .eq('user_id', authUserId)
                     .maybeSingle();
 
                 if (error) {
@@ -189,7 +225,7 @@ export function useForumUser() {
                 console.warn('Error loading page size from Supabase:', err);
             }
         })();
-    }, [isAuthenticated, currentUser?.id]);
+    }, [isAuthenticated, authUserId]);
 
     // Update user profile (avatar/banner)
     const updateUserProfile = useCallback(async (userId: string, updates: { avatar?: string; banner?: string }) => {
