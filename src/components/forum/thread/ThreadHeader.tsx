@@ -52,11 +52,11 @@ export default function ThreadHeader({
       <div className="hud-panel overflow-hidden">
         {/* Banner Image */}
         {thread.banner && !bannerError && (
-          <div className="relative h-80 overflow-hidden bg-forum-bg">
+          <div className="relative w-full bg-forum-bg/50">
             <img
               src={thread.banner}
               alt="Thread banner"
-              className="w-full h-full object-cover object-center"
+              className="w-full h-auto max-h-96 object-contain"
               onError={(e) => {
                 console.error('Banner image failed to load:', thread.banner);
                 setBannerError(true);
@@ -64,14 +64,12 @@ export default function ThreadHeader({
               }}
               onLoad={() => console.log('Banner loaded successfully:', thread.banner)}
             />
-            {/* Very subtle gradient only at the very bottom for smooth transition */}
-            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-forum-card/60 to-transparent pointer-events-none" />
           </div>
         )}
         
         {/* Fallback when banner fails to load */}
         {thread.banner && bannerError && (
-          <div className="relative h-80 overflow-hidden bg-gradient-to-br from-forum-card via-forum-bg to-forum-card border-b border-forum-border/30">
+          <div className="relative w-full h-48 bg-gradient-to-br from-forum-card via-forum-bg to-forum-card border-b border-forum-border/30">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center text-forum-muted/40">
                 <div className="text-[10px] font-mono mb-1">Banner unavailable</div>
