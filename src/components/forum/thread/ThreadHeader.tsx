@@ -70,7 +70,7 @@ export default function ThreadHeader({
                 />
               </div>
               {/* Dark gradient overlay for text readability */}
-              <div className="absolute inset-0 h-64 bg-gradient-to-b from-black/60 via-black/70 to-forum-card pointer-events-none" />
+              <div className="absolute inset-0 h-64 bg-gradient-to-b from-black/70 via-black/80 to-forum-card pointer-events-none" />
             </>
           ) : thread.banner && bannerError ? (
             <>
