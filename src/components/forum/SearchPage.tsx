@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import ForumHeader from '@/components/forum/ForumHeader';
 import MobileBottomNav from '@/components/forum/MobileBottomNav';
+import { getUserAvatar } from '@/lib/avatar';
 import { supabase } from '@/lib/supabase';
 import { useForumContext } from '@/context/ForumContext';
 import { useSearch } from '@/hooks/useSearch';
@@ -397,7 +398,7 @@ export default function SearchPage() {
                                 <div className="flex items-start gap-3">
                                     {result.type === 'user' || result.authorAvatar ? (
                                         <img
-                                            src={result.authorId ? getUserProfile(result.authorId).avatar || result.authorAvatar : result.authorAvatar}
+                                            src={result.authorAvatar || getUserAvatar('', result.title)}
                                             alt={result.title}
                                             className="h-10 w-10 border border-forum-border object-cover flex-shrink-0"
                                             style={{ borderRadius: result.type === 'user' ? '0.375rem' : '4px' }}

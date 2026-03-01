@@ -318,6 +318,8 @@ export function useRealtime({
                                         upvotes: updatedThread.upvotes,
                                         downvotes: updatedThread.downvotes,
                                         tags: updatedThread.tags || [],
+                                        thumbnail: updatedThread.thumbnail || undefined,
+                                        banner: updatedThread.banner || undefined,
                                     }
                                     : t
                             ),
@@ -338,7 +340,7 @@ export function useRealtime({
                 id, title, excerpt, author_id, category_id, topic_id,
                 created_at, last_reply_at, last_reply_by_id,
                 reply_count, view_count, is_pinned, is_locked, is_hot,
-                tags, upvotes, downvotes,
+                tags, upvotes, downvotes, thumbnail, banner,
                 author:forum_users!threads_author_id_fkey(id, username, avatar, banner, post_count, reputation, join_date, is_online, rank, role),
                 last_reply_by:forum_users!threads_last_reply_by_id_fkey(id, username, avatar, banner, post_count, reputation, join_date, is_online, rank, role)
               `)
@@ -407,6 +409,8 @@ export function useRealtime({
                             tags: threadData.tags || [],
                             upvotes: threadData.upvotes,
                             downvotes: threadData.downvotes,
+                            thumbnail: threadData.thumbnail || undefined,
+                            banner: threadData.banner || undefined,
                         };
 
                         setCategoriesState((prev) =>

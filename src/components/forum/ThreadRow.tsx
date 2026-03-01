@@ -4,7 +4,6 @@ import {
   Pin,
   Lock,
   Flame,
-  CheckCircle2,
   Shield,
   MessageSquare,
 } from 'lucide-react';
@@ -20,16 +19,10 @@ interface ThreadRowProps {
 export default function ThreadRow({ thread }: ThreadRowProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  const { getUserProfile } = useForumContext();
 
-  const authorProfile = getUserProfile(thread.author.id);
-  const displayAvatar = authorProfile?.avatar || thread.author.avatar;
-
-  const lastReplyByProfile = getUserProfile(thread.lastReplyBy.id);
-  const displayLastReplyByAvatar = lastReplyByProfile?.avatar || thread.lastReplyBy.avatar;
-
-  // Check if thread is solved
-  const isSolved = thread.tags?.some(tag => tag.toLowerCase() === 'solved');
+  // Use avatars directly from thread data - they're already loaded from forum_users table
+  const displayAvatar = thread.author.avatar || getUserAvatar('', thread.author.username);
+  const displayLastReplyByAvatar = thread.lastReplyBy.avatar || getUserAvatar('', thread.lastReplyBy.username);
 
   // Calculate total pages (assuming 20 posts per page)
   const postsPerPage = 20;
@@ -53,9 +46,9 @@ export default function ThreadRow({ thread }: ThreadRowProps) {
       )}
 
       <div className="flex items-center gap-3 px-3 py-2.5">
-        {/* Thread Thumbnail - 75x50 */}
-        <div className="relative flex-shrink-0">
-          {thread.thumbnail ? (
+        {/* Thread Thumbnail - 75x50 - Only show if uploaded */}
+        {thread.thumbnail && (
+          <div className="relative flex-shrink-0">
             <img
               src={thread.thumbnail}
               alt={thread.title}
@@ -63,32 +56,17 @@ export default function ThreadRow({ thread }: ThreadRowProps) {
               style={{
                 backgroundColor: '#1a1a1a'
               }}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
             />
-          ) : (
-            /* Placeholder when no thumbnail */
-            <div className="w-[75px] h-[50px] rounded border border-forum-border/40 bg-gradient-to-br from-forum-card via-forum-bg to-forum-card flex items-center justify-center">
-              <MessageSquare size={20} className="text-forum-muted/30" />
-            </div>
-          )}
-          {thread.hasUnread && (
-            <div className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-forum-pink" />
-          )}
-        </div>
+            {thread.hasUnread && (
+              <div className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-forum-pink" />
+            )}
+          </div>
+        )}
 
         {/* Main Content */}
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           {/* Title Row */}
           <div className="flex items-center gap-2">
-            {/* Category Badge */}
-            {thread.tags && thread.tags.length > 0 && (
-              <span className="inline-flex items-center rounded px-2 py-0.5 text-[13px] font-normal bg-blue-500 text-white flex-shrink-0">
-                {thread.tags[0]}
-              </span>
-            )}
-            
             {/* Thread Title */}
             <h3 className="text-[17px] font-normal text-forum-text group-hover:text-forum-pink transition-colors truncate flex-1">
               {thread.title}
@@ -103,9 +81,6 @@ export default function ThreadRow({ thread }: ThreadRowProps) {
             )}
             {thread.isHot && (
               <Flame size={14} className="text-orange-400 flex-shrink-0" />
-            )}
-            {isSolved && (
-              <CheckCircle2 size={14} className="text-emerald-400 flex-shrink-0" />
             )}
           </div>
 

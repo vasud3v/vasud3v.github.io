@@ -1,8 +1,3 @@
-/**
- * Check Thread Thumbnails
- * Verify that threads have thumbnails stored correctly
- */
-
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
@@ -14,64 +9,56 @@ const supabase = createClient(
 );
 
 async function checkThreadThumbnails() {
-  console.log('\n🔍 Checking Thread Thumbnails\n');
+  console.log('\n📊 Checking Thread Thumbnails in Database...\n');
 
   try {
     // Get all threads with their thumbnails
     const { data: threads, error } = await supabase
       .from('threads')
-      .select(`
-        id,
-        title,
-        thumbnail,
-        banner,
-        author:forum_users!threads_author_id_fkey(username, avatar)
-      `)
+      .select('id, title, thumbnail, author_id, author:forum_users!threads_author_id_fkey(username)')
       .order('created_at', { ascending: false })
       .limit(10);
 
-    if (error) throw error;
-
-    if (!threads || threads.length === 0) {
-      console.log('❌ No threads found.');
+    if (error) {
+      console.error('❌ Error:', error.message);
       return;
     }
 
-    console.log(`Found ${threads.length} recent threads:\n`);
+    if (!threads || threads.length === 0) {
+      console.log('⚠️  No threads found in database');
+      return;
+    }
 
+    console.log(`✅ Found ${threads.length} recent threads:\n`);
+    
     threads.forEach((thread, index) => {
       const author = Array.isArray(thread.author) ? thread.author[0] : thread.author;
-      
-      console.log(`${index + 1}. ${thread.title}`);
-      console.log(`   ID: ${thread.id}`);
-      console.log(`   Author: ${author.username}`);
-      console.log(`   Author Avatar: ${author.avatar}`);
-      console.log(`   Thread Thumbnail: ${thread.thumbnail || '❌ NOT SET'}`);
-      console.log(`   Thread Banner: ${thread.banner || '❌ NOT SET'}`);
-      
-      if (!thread.thumbnail) {
-        console.log(`   ⚠️  This thread will show author avatar as fallback`);
-      } else if (thread.thumbnail.includes('imgbb.com') || thread.thumbnail.includes('ibb.co')) {
-        console.log(`   ✅ Thumbnail is on ImgBB`);
-      } else {
-        console.log(`   ⚠️  Thumbnail is NOT on ImgBB: ${thread.thumbnail.substring(0, 50)}...`);
+      console.log(`${index + 1}. "${thread.title}"`);
+      console.log(`   Author: ${author?.username || 'Unknown'}`);
+      console.log(`   Thumbnail: ${thread.thumbnail ? '✓ YES' : '✗ NO'}`);
+      if (thread.thumbnail) {
+        console.log(`   URL: ${thread.thumbnail.substring(0, 80)}...`);
       }
-      
       console.log('');
     });
 
-    // Count threads with/without thumbnails
-    const withThumbnails = threads.filter(t => t.thumbnail).length;
-    const withoutThumbnails = threads.length - withThumbnails;
+    // Count threads with thumbnails
+    const { count: withThumbnails } = await supabase
+      .from('threads')
+      .select('*', { count: 'exact', head: true })
+      .not('thumbnail', 'is', null);
 
-    console.log('\n📊 Summary:');
-    console.log(`   Total threads: ${threads.length}`);
+    const { count: total } = await supabase
+      .from('threads')
+      .select('*', { count: 'exact', head: true });
+
+    console.log(`\n📈 Statistics:`);
+    console.log(`   Total threads: ${total}`);
     console.log(`   With thumbnails: ${withThumbnails}`);
-    console.log(`   Without thumbnails: ${withoutThumbnails}`);
-    console.log(`   Threads without thumbnails will show author avatar as fallback\n`);
+    console.log(`   Without thumbnails: ${total - withThumbnails}`);
 
-  } catch (error) {
-    console.error('❌ Error:', error.message);
+  } catch (err) {
+    console.error('❌ Error:', err);
   }
 }
 

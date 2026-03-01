@@ -758,7 +758,7 @@ export default function UserProfilePage() {
                               />
                             ) : (
                               <img
-                                src={getUserProfile(thread.author.id).avatar || thread.author.avatar}
+                                src={thread.author.avatar || getUserAvatar('', thread.author.username)}
                                 alt={thread.author.username}
                                 className="h-8 w-8 rounded object-cover border border-forum-border"
                               />

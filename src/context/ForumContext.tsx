@@ -224,6 +224,11 @@ export function ForumProvider({ children }: { children: ReactNode }) {
   // --- User Profile Sync ---
   // Listen for profile changes and update cached post data
   useUserProfileSync((userId, updates) => {
+    // Skip if categories haven't loaded yet
+    if (categories.loadingCategories || categories.categoriesState.length === 0) {
+      return;
+    }
+
     // Update posts with new user data
     posts.updateUserInPosts(userId, {
       avatar: updates.avatar || undefined,

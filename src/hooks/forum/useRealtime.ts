@@ -142,7 +142,7 @@ export function useRealtime({
                 id, title, excerpt, author_id, category_id, topic_id,
                 created_at, last_reply_at, last_reply_by_id,
                 reply_count, view_count, is_pinned, is_locked, is_hot,
-                tags, upvotes, downvotes,
+                tags, upvotes, downvotes, thumbnail, banner,
                 author:forum_users!threads_author_id_fkey(id, username, avatar, banner, post_count, reputation, join_date, is_online, rank, role),
                 last_reply_by:forum_users!threads_last_reply_by_id_fkey(id, username, avatar, banner, post_count, reputation, join_date, is_online, rank, role)
               `)
@@ -159,7 +159,7 @@ export function useRealtime({
                             author: { id: authorData.id, username: authorData.username, avatar: authorData.avatar, banner: authorData.banner || undefined, postCount: authorData.post_count, reputation: authorData.reputation, joinDate: authorData.join_date, isOnline: authorData.is_online, rank: authorData.rank || 'Newcomer', role: authorData.role || 'member' },
                             categoryId: threadData.category_id, createdAt: threadData.created_at, lastReplyAt: threadData.last_reply_at,
                             lastReplyBy: lastReplyByData ? { id: lastReplyByData.id, username: lastReplyByData.username, avatar: lastReplyByData.avatar, banner: lastReplyByData.banner || undefined, postCount: lastReplyByData.post_count, reputation: lastReplyByData.reputation, joinDate: lastReplyByData.join_date, isOnline: lastReplyByData.is_online, rank: lastReplyByData.rank || 'Newcomer', role: lastReplyByData.role || 'member' } : { id: authorData.id, username: authorData.username, avatar: authorData.avatar, banner: authorData.banner || undefined, postCount: authorData.post_count, reputation: authorData.reputation, joinDate: authorData.join_date, isOnline: authorData.is_online, rank: authorData.rank || 'Newcomer', role: authorData.role || 'member' },
-                            replyCount: threadData.reply_count, viewCount: threadData.view_count, isPinned: threadData.is_pinned, isLocked: threadData.is_locked, isHot: threadData.is_hot, hasUnread: false, tags: threadData.tags || [], upvotes: threadData.upvotes, downvotes: threadData.downvotes,
+                            replyCount: threadData.reply_count, viewCount: threadData.view_count, isPinned: threadData.is_pinned, isLocked: threadData.is_locked, isHot: threadData.is_hot, hasUnread: false, tags: threadData.tags || [], upvotes: threadData.upvotes, downvotes: threadData.downvotes, thumbnail: threadData.thumbnail || undefined, banner: threadData.banner || undefined,
                         };
 
                         setCategoriesState((prev) =>

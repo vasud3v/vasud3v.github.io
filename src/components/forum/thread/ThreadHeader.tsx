@@ -9,6 +9,7 @@ import RoleBadge from '@/components/forum/RoleBadge';
 import { Thread, Category, UserRole } from '@/types/forum';
 import { formatDate, getRankColor, getRankIcon } from '@/lib/forumUtils';
 import { useForumContext } from '@/context/ForumContext';
+import { getUserAvatar } from '@/lib/avatar';
 import EditThreadModal from '@/components/forum/EditThreadModal';
 
 interface ThreadHeaderProps {
@@ -70,7 +71,7 @@ export default function ThreadHeader({
                 />
               </div>
               {/* Dark gradient overlay for text readability */}
-              <div className="absolute inset-0 h-64 bg-gradient-to-b from-black/70 via-black/80 to-forum-card pointer-events-none" />
+              <div className="absolute inset-0 h-64 bg-gradient-to-b from-black/20 via-black/30 to-forum-card pointer-events-none" />
             </>
           ) : thread.banner && bannerError ? (
             <>
@@ -138,7 +139,7 @@ export default function ThreadHeader({
           <div className="flex items-center gap-3 flex-wrap drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
             <div className="flex items-center gap-2">
               <img
-                src={getUserProfile(thread.author.id).avatar || thread.author.avatar}
+                src={thread.author.avatar || getUserAvatar('', thread.author.username)}
                 alt={thread.author.username}
                 className="h-7 w-7 rounded-md border border-forum-border object-cover"
               />

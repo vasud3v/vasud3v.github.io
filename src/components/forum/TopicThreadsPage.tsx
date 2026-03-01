@@ -140,6 +140,7 @@ export default function TopicThreadsPage() {
           upvotes: t.upvotes,
           downvotes: t.downvotes,
           banner: t.banner,
+          thumbnail: t.thumbnail,
         };
       });
 

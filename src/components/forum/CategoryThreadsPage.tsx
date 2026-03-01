@@ -9,6 +9,7 @@ import RecentActivityFeed from '@/components/forum/RecentActivityFeed';
 import ForumRules from '@/components/forum/ForumRules';
 import SelectTopicModal from '@/components/forum/SelectTopicModal';
 import { useForumContext } from '@/context/ForumContext';
+import { getUserAvatar } from '@/lib/avatar';
 import { SortOption, FilterOption } from '@/types/forum';
 import {
   Home as HomeIcon,
@@ -608,7 +609,7 @@ export default function CategoryThreadsPage() {
                     <div key={id} className="flex items-center gap-2.5 py-1">
                       <span className="text-[10px] font-mono font-bold text-forum-muted w-4">{idx + 1}.</span>
                       <img
-                        src={getUserProfile(user.id).avatar || user.avatar}
+                        src={user.avatar || getUserAvatar('', user.username)}
                         alt={user.username}
                         className="h-6 w-6 rounded-full object-cover border border-forum-border"
                       />

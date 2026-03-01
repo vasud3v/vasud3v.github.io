@@ -25,7 +25,7 @@ export function initialAvatar(username: string): string {
 }
 
 /** Validate a CSS hex color (#RGB or #RRGGBB) */
-export const isValidHex = (v: string) => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v);
+export const isValidHex = (v: string) => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/i.test(v);
 
 /** Fuzzy-match: returns true when every char of query appears in order in target */
 export function fuzzyMatch(target: string, query: string): boolean {

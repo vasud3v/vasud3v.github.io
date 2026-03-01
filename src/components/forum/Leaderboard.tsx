@@ -104,7 +104,7 @@ export default function Leaderboard() {
             {/* Avatar */}
             <div className="relative flex-shrink-0">
               <img
-                src={getUserProfile(user.id).avatar || user.avatar}
+                src={user.avatar || getUserAvatar('', user.username)}
                 alt={user.username}
                 className={`h-6 w-6 rounded object-cover border ${idx === 0 ? 'border-forum-pink/40' : 'border-forum-border'
                   }`}

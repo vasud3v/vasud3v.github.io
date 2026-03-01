@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Table } from '@tiptap/extension-table';
@@ -120,12 +120,36 @@ function Modal({ title, onClose, onConfirm, confirmLabel = 'Insert', confirmDisa
   title: string; onClose: () => void; onConfirm?: () => void; confirmLabel?: string;
   confirmDisabled?: boolean; children: React.ReactNode; hideConfirm?: boolean;
 }) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !confirmDisabled && onConfirm && !hideConfirm) {
+      e.preventDefault();
+      onConfirm();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div 
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80" 
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={handleKeyDown}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
       <div className="bg-zinc-900 rounded-xl border border-zinc-700 p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[15px] font-semibold text-zinc-100">{title}</h3>
-          <button type="button" onClick={onClose} className="text-zinc-500 hover:text-zinc-300 transition-colors"><X size={14} /></button>
+          <h3 id="modal-title" className="text-[15px] font-semibold text-zinc-100">{title}</h3>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            aria-label="Close modal"
+          >
+            <X size={14} />
+          </button>
         </div>
         {children}
         {!hideConfirm && (
@@ -156,8 +180,27 @@ function Field({ label, ...props }: { label: string } & React.InputHTMLAttribute
 function TablePicker({ onInsert, onClose }: { onInsert: (r: number, c: number) => void; onClose: () => void; }) {
   const [hr, setHr] = useState(2);
   const [hc, setHc] = useState(3);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseLeave = () => {
+    closeTimeoutRef.current = setTimeout(() => {
+      onClose();
+    }, 300);
+  };
+
+  const handleMouseEnter = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
   return (
-    <div className="absolute top-full left-0 mt-1.5 z-[100] bg-zinc-900 border border-zinc-700/70 rounded-xl p-3 shadow-2xl" onMouseLeave={onClose}>
+    <div 
+      className="absolute top-full left-0 mt-1.5 z-[100] bg-zinc-900 border border-zinc-700/70 rounded-xl p-3 shadow-2xl" 
+      onMouseLeave={handleMouseLeave}
+      onMouseEnter={handleMouseEnter}
+    >
       <div className="text-center mb-2">
         <span className="text-[14px] font-mono font-bold text-zinc-100">{hr} × {hc}</span>
       </div>
@@ -168,6 +211,7 @@ function TablePicker({ onInsert, onClose }: { onInsert: (r: number, c: number) =
               <button key={ci} type="button"
                 onMouseEnter={() => { setHr(ri + 1); setHc(ci + 1); }}
                 onClick={() => { onInsert(hr, hc); }}
+                aria-label={`Insert ${ri + 1} by ${ci + 1} table`}
                 className={`w-[22px] h-[22px] border-2 rounded transition-all ${ri < hr && ci < hc ? 'border-teal-400 bg-teal-400/20' : 'border-zinc-600 bg-zinc-800 hover:border-zinc-500'
                   }`} />
             ))}
@@ -207,82 +251,227 @@ export function AdvancedEditor({
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Memoize extensions to prevent recreation on every render
+  const extensions = useMemo(() => [
+    StarterKit.configure({
+      heading: {
+        levels: [1, 2, 3],
+      },
+      // Disable Link and Underline from StarterKit since we're configuring them separately
+      link: false,
+      underline: false,
+    }),
+    TextStyle,
+    Color,
+    // Configure Underline separately for better control
+    Underline,
+    Subscript,
+    Superscript,
+    Highlight.configure({
+      multicolor: true,
+    }),
+    TextAlign.configure({
+      types: ['heading', 'paragraph'],
+    }),
+    TaskList,
+    TaskItem.configure({
+      nested: true,
+    }),
+    // Configure Link separately with custom settings
+    TiptapLink.configure({
+      openOnClick: false,
+      HTMLAttributes: { class: 'text-teal-400 underline hover:text-teal-300 cursor-pointer' },
+      validate: href => /^https?:\/\//.test(href),
+    }),
+    CustomImage.configure({
+      inline: false,
+      allowBase64: true,
+      HTMLAttributes: {
+        class: 'forum-image',
+      },
+    }),
+    Video,
+    Table.configure({ resizable: true }),
+    TableRow,
+    TableHeader,
+    TableCell,
+  ], []);
+
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TextStyle,
-      Color,
-      Underline,
-      Subscript,
-      Superscript,
-      Highlight.configure({
-        multicolor: true,
-      }),
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
-      TaskList,
-      TaskItem.configure({
-        nested: true,
-      }),
-      TiptapLink.configure({
-        openOnClick: false,
-        HTMLAttributes: { class: 'text-teal-400 underline hover:text-teal-300 cursor-pointer' },
-      }),
-      CustomImage.configure({
-        inline: false,
-        allowBase64: true,
-        HTMLAttributes: {
-          class: 'forum-image',
-        },
-      }),
-      Video,
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-    ],
+    extensions,
     content: value || '<p></p>',
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      // Only call onChange if content actually changed
+      if (html !== value) {
+        onChange(html);
+      }
+    },
     editorProps: {
       attributes: {
         class: 'prose prose-invert max-w-none focus:outline-none px-4 py-3',
         'data-placeholder': placeholder,
       },
+      handlePaste: (view, event) => {
+        // Let TipTap handle the paste normally, but we could add custom logic here
+        // For now, just return false to use default behavior
+        return false;
+      },
+      handleDrop: (view, event) => {
+        // Handle file drops
+        const files = event.dataTransfer?.files;
+        if (files && files.length > 0) {
+          const file = files[0];
+          
+          // Check if it's an image
+          if (file.type.startsWith('image/')) {
+            event.preventDefault();
+            uploadFile(file, 'image');
+            return true;
+          }
+          
+          // Check if it's a video
+          if (file.type.startsWith('video/')) {
+            event.preventDefault();
+            uploadFile(file, 'video');
+            return true;
+          }
+        }
+        return false;
+      },
+      handleKeyDown: (view, event) => {
+        // Cmd/Ctrl + K for link
+        if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+          event.preventDefault();
+          setShowLinkModal(true);
+          return true;
+        }
+        return false;
+      },
     },
   });
 
   useEffect(() => {
-    if (editor && value !== undefined && value !== editor.getHTML()) {
-      editor.commands.setContent(value || '<p></p>');
+    if (!editor || value === undefined) return;
+    
+    // Get current content
+    const currentContent = editor.getHTML();
+    const newContent = value || '<p></p>';
+    
+    // Normalize for comparison - remove extra whitespace and compare
+    const normalizedCurrent = currentContent.replace(/\s+/g, ' ').trim();
+    const normalizedNew = newContent.replace(/\s+/g, ' ').trim();
+    
+    // Only update if content is actually different
+    if (normalizedCurrent !== normalizedNew) {
+      // Preserve cursor position if possible
+      const { from, to } = editor.state.selection;
+      editor.commands.setContent(newContent, false);
+      
+      // Try to restore cursor position
+      try {
+        const newDocSize = editor.state.doc.content.size;
+        const safeFrom = Math.min(from, newDocSize);
+        const safeTo = Math.min(to, newDocSize);
+        editor.commands.setTextSelection({ from: safeFrom, to: safeTo });
+      } catch (e) {
+        // If cursor restoration fails, just focus the editor
+        editor.commands.focus('end');
+      }
     }
   }, [editor, value]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (editor) {
+        editor.destroy();
+      }
+    };
+  }, [editor]);
 
   if (!editor) return null;
 
   const insertLink = () => {
-    if (!linkUrl) return;
+    if (!linkUrl || !editor) return;
+    
+    // Validate URL format
+    try {
+      new URL(linkUrl);
+    } catch {
+      toast.error('Please enter a valid URL');
+      return;
+    }
+    
+    const { from, to } = editor.state.selection;
+    const hasSelection = from !== to;
+    
     if (linkText) {
+      // Insert new link with custom text
       editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
-    } else {
+    } else if (hasSelection) {
+      // Apply link to selected text
       editor.chain().focus().setLink({ href: linkUrl }).run();
+    } else {
+      // Insert link with URL as text
+      editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkUrl}</a>`).run();
     }
     setShowLinkModal(false); setLinkUrl(''); setLinkText('');
   };
 
   const insertImage = () => {
-    if (!imageUrl) return;
+    if (!imageUrl || !editor) return;
+    
+    // Validate URL format
+    try {
+      new URL(imageUrl);
+    } catch {
+      toast.error('Please enter a valid URL');
+      return;
+    }
+    
+    // Validate image extension
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    const urlLower = imageUrl.toLowerCase();
+    const hasValidExtension = validExtensions.some(ext => urlLower.includes(ext));
+    
+    if (!hasValidExtension) {
+      toast.error('Please enter a valid image URL (.jpg, .png, .gif, .webp, .svg)');
+      return;
+    }
+    
     editor.chain().focus().setImage({ src: imageUrl }).run();
     setShowImageModal(false); setImageUrl('');
   };
 
   const insertVideo = () => {
-    if (!videoUrl) return;
+    if (!videoUrl || !editor) return;
+    
+    // Validate URL format
+    try {
+      new URL(videoUrl);
+    } catch {
+      toast.error('Please enter a valid URL');
+      return;
+    }
+    
+    // Validate video extension
+    const validExtensions = ['.mp4', '.webm', '.mov', '.avi', '.ogg'];
+    const urlLower = videoUrl.toLowerCase();
+    const hasValidExtension = validExtensions.some(ext => urlLower.includes(ext));
+    
+    if (!hasValidExtension) {
+      toast.error('Please enter a valid video URL (.mp4, .webm, .mov, .avi, .ogg)');
+      return;
+    }
+    
     editor.chain().focus().setVideo({ src: videoUrl }).run();
     setShowVideoModal(false); setVideoUrl('');
   };
 
   const uploadFile = async (file: File, type: 'image' | 'video') => {
+    if (!editor) return;
+    
     const isVideo = type === 'video';
     const maxSize = isVideo ? 500 : 32; // 500MB for videos, 32MB for images
 
@@ -309,6 +498,9 @@ export function AdvancedEditor({
     } catch (error: any) {
       console.error('Failed to upload file:', error);
       toast.error(error.message || 'Failed to upload file. Make sure the upload server is running.');
+      // Reset file inputs on error
+      if (imageFileInputRef.current) imageFileInputRef.current.value = '';
+      if (videoFileInputRef.current) videoFileInputRef.current.value = '';
     } finally {
       setIsUploading(false);
     }
@@ -317,6 +509,15 @@ export function AdvancedEditor({
   const handleImageFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please select a valid image file (PNG, JPEG, GIF, WebP, or SVG)');
+      if (imageFileInputRef.current) imageFileInputRef.current.value = '';
+      return;
+    }
+    
     await uploadFile(file, 'image');
     if (imageFileInputRef.current) imageFileInputRef.current.value = '';
   };
@@ -324,6 +525,15 @@ export function AdvancedEditor({
   const handleVideoFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // Validate file type
+    const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/ogg'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please select a valid video file (MP4, WebM, MOV, AVI, or OGG)');
+      if (videoFileInputRef.current) videoFileInputRef.current.value = '';
+      return;
+    }
+    
     await uploadFile(file, 'video');
     if (videoFileInputRef.current) videoFileInputRef.current.value = '';
   };
@@ -338,12 +548,12 @@ export function AdvancedEditor({
       <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-zinc-700/50 flex-wrap bg-zinc-800/40 rounded-t-xl overflow-visible relative z-10">
 
         {/* Undo/Redo */}
-        <ToolBtn onClick={() => editor.chain().focus().undo().run()} title="Undo (⌘Z)">
+        <ToolBtn onClick={() => editor?.chain().focus().undo().run()} title="Undo (⌘Z)">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M3 7v6h6" /><path d="M3 13C5 7 9 4 14 4a9 9 0 0 1 9 9 9 9 0 0 1-9 9c-4 0-7-2-8.5-5" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().redo().run()} title="Redo (⌘⇧Z)">
+        <ToolBtn onClick={() => editor?.chain().focus().redo().run()} title="Redo (⌘⇧Z)">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 7v6h-6" /><path d="M21 13C19 7 15 4 10 4a9 9 0 0 0-9 9 9 9 0 0 0 9 9c4 0 7-2 8.5-5" />
           </svg>
@@ -351,64 +561,64 @@ export function AdvancedEditor({
         <Sep />
 
         {/* Text format */}
-        <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} title="Bold">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" /><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')} title="Italic">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="19" y1="4" x2="10" y2="4" /><line x1="14" y1="20" x2="5" y2="20" /><line x1="15" y1="4" x2="9" y2="20" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Underline">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive('underline')} title="Underline">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3" /><line x1="4" y1="21" x2="20" y2="21" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title="Strikethrough">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive('strike')} title="Strikethrough">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M16 4H9a3 3 0 0 0-2.83 4" /><path d="M14 12a4 4 0 0 1 0 8H6" /><line x1="4" y1="12" x2="20" y2="12" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} title="Highlight">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleHighlight().run()} active={editor?.isActive('highlight')} title="Highlight">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} title="Inline Code">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive('code')} title="Inline Code">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleSubscript().run()} active={editor.isActive('subscript')} title="Subscript">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleSubscript().run()} active={editor?.isActive('subscript')} title="Subscript">
           <span className="font-mono text-[9px]">X₂</span>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleSuperscript().run()} active={editor.isActive('superscript')} title="Superscript">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleSuperscript().run()} active={editor?.isActive('superscript')} title="Superscript">
           <span className="font-mono text-[9px]">X²</span>
         </ToolBtn>
         <Sep />
 
         {/* Headings */}
-        <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Heading 1">H1</ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Heading 2">H2</ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Heading 3">H3</ToolBtn>
+        <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive('heading', { level: 1 })} title="Heading 1">H1</ToolBtn>
+        <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })} title="Heading 2">H2</ToolBtn>
+        <ToolBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} active={editor?.isActive('heading', { level: 3 })} title="Heading 3">H3</ToolBtn>
         <Sep />
 
         {/* Lists */}
-        <ToolBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Bullet List">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive('bulletList')} title="Bullet List">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
             <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Numbered List">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive('orderedList')} title="Numbered List">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="10" y1="6" x2="21" y2="6" /><line x1="10" y1="12" x2="21" y2="12" /><line x1="10" y1="18" x2="21" y2="18" />
             <path d="M4 6h1v4" /><path d="M4 10h2" /><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} title="Task List">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleTaskList().run()} active={editor?.isActive('taskList')} title="Task List">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
           </svg>
@@ -417,6 +627,7 @@ export function AdvancedEditor({
 
         {/* Text Alignment */}
         <ToolBtn onClick={() => {
+          if (!editor) return;
           if (editor.isActive({ textAlign: 'left' })) {
             editor.chain().focus().unsetTextAlign().run();
           } else {
@@ -428,6 +639,7 @@ export function AdvancedEditor({
           </svg>
         </ToolBtn>
         <ToolBtn onClick={() => {
+          if (!editor) return;
           if (editor.isActive({ textAlign: 'center' })) {
             editor.chain().focus().unsetTextAlign().run();
           } else {
@@ -439,6 +651,7 @@ export function AdvancedEditor({
           </svg>
         </ToolBtn>
         <ToolBtn onClick={() => {
+          if (!editor) return;
           if (editor.isActive({ textAlign: 'right' })) {
             editor.chain().focus().unsetTextAlign().run();
           } else {
@@ -450,6 +663,7 @@ export function AdvancedEditor({
           </svg>
         </ToolBtn>
         <ToolBtn onClick={() => {
+          if (!editor) return;
           if (editor.isActive({ textAlign: 'justify' })) {
             editor.chain().focus().unsetTextAlign().run();
           } else {
@@ -463,24 +677,24 @@ export function AdvancedEditor({
         <Sep />
 
         {/* More formatting */}
-        <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Blockquote">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive('blockquote')} title="Blockquote">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
             <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="Code Block">
+        <ToolBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} active={editor?.isActive('codeBlock')} title="Code Block">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <polyline points="9 8 5 12 9 16" /><polyline points="15 8 19 12 15 16" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal Rule">
+        <ToolBtn onClick={() => editor?.chain().focus().setHorizontalRule().run()} title="Horizontal Rule">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="3" y1="12" x2="21" y2="12" />
           </svg>
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} title="Clear Formatting">
+        <ToolBtn onClick={() => editor?.chain().focus().clearNodes().unsetAllMarks().run()} title="Clear Formatting">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
             <line x1="2" y1="2" x2="22" y2="22" />
@@ -489,7 +703,7 @@ export function AdvancedEditor({
         <Sep />
 
         {/* Link */}
-        <ToolBtn onClick={() => setShowLinkModal(true)} active={editor.isActive('link')} title="Insert Link">
+        <ToolBtn onClick={() => setShowLinkModal(true)} active={editor?.isActive('link')} title="Insert Link">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
@@ -525,7 +739,12 @@ export function AdvancedEditor({
           </ToolBtn>
           {showTablePicker && (
             <TablePicker
-              onInsert={(r, c) => { editor.chain().focus().insertTable({ rows: r, cols: c, withHeaderRow: true }).run(); setShowTablePicker(false); }}
+              onInsert={(r, c) => { 
+                if (editor) {
+                  editor.chain().focus().insertTable({ rows: r, cols: c, withHeaderRow: true }).run(); 
+                }
+                setShowTablePicker(false); 
+              }}
               onClose={() => setShowTablePicker(false)}
             />
           )}
@@ -535,13 +754,13 @@ export function AdvancedEditor({
         {inTable && (
           <>
             <Sep />
-            <ToolBtn onClick={() => editor.chain().focus().addColumnBefore().run()} title="+Col Before">+C←</ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().addColumnAfter().run()} title="+Col After">+C→</ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().addRowBefore().run()} title="+Row Before">+R↑</ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().addRowAfter().run()} title="+Row After">+R↓</ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().deleteColumn().run()} title="Del Column">-C</ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().deleteRow().run()} title="Del Row">-R</ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().deleteTable().run()} title="Delete Table">
+            <ToolBtn onClick={() => editor?.chain().focus().addColumnBefore().run()} title="+Col Before">+C←</ToolBtn>
+            <ToolBtn onClick={() => editor?.chain().focus().addColumnAfter().run()} title="+Col After">+C→</ToolBtn>
+            <ToolBtn onClick={() => editor?.chain().focus().addRowBefore().run()} title="+Row Before">+R↑</ToolBtn>
+            <ToolBtn onClick={() => editor?.chain().focus().addRowAfter().run()} title="+Row After">+R↓</ToolBtn>
+            <ToolBtn onClick={() => editor?.chain().focus().deleteColumn().run()} title="Del Column">-C</ToolBtn>
+            <ToolBtn onClick={() => editor?.chain().focus().deleteRow().run()} title="Del Row">-R</ToolBtn>
+            <ToolBtn onClick={() => editor?.chain().focus().deleteTable().run()} title="Delete Table">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
@@ -551,9 +770,18 @@ export function AdvancedEditor({
         <Sep />
 
         {/* Color */}
-        <ColorPicker onApply={color => editor.chain().focus().setMark('textStyle', { color }).run()} />
+        <ColorPicker onApply={color => editor?.chain().focus().setMark('textStyle', { color }).run()} />
 
         <div className="flex-1" />
+
+        {/* Keyboard shortcuts hint */}
+        <div className="hidden lg:flex items-center gap-1 text-[8px] font-mono text-zinc-500 px-2">
+          <span>⌘B Bold</span>
+          <span className="text-zinc-700">•</span>
+          <span>⌘I Italic</span>
+          <span className="text-zinc-700">•</span>
+          <span>⌘K Link</span>
+        </div>
 
         {/* Preview */}
         {onPreview && (
@@ -588,8 +816,13 @@ export function AdvancedEditor({
           title="Clear All Content"
           onClose={() => setShowClearConfirm(false)}
           onConfirm={() => {
-            editor.commands.clearContent();
-            onChange('');
+            if (editor) {
+              editor.commands.clearContent();
+              editor.commands.clearNodes();
+              // Clear undo/redo history
+              editor.commands.setContent('<p></p>');
+              onChange('');
+            }
             setShowClearConfirm(false);
             toast.success('Content cleared');
           }}

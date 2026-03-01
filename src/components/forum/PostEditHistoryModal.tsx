@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, History, Clock, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useForumContext } from '@/context/ForumContext';
+import { getUserAvatar } from '@/lib/avatar';
 
 interface PostEditHistory {
   id: string;
@@ -158,7 +159,7 @@ export default function PostEditHistoryModal({
                   <div className="flex items-center justify-between px-4 py-2.5 bg-forum-card-alt/30 border-b border-forum-border/20">
                     <div className="flex items-center gap-3">
                       <img
-                        src={getUserProfile(entry.edited_by).avatar || entry.editor.avatar}
+                        src={entry.editor.avatar || getUserAvatar('', entry.editor.username)}
                         alt={entry.editor.username}
                         className="h-6 w-6 rounded border border-forum-border object-cover"
                       />

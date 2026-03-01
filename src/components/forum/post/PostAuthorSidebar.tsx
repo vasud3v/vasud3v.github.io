@@ -5,6 +5,7 @@ import { User, UserRole } from '@/types/forum';
 import RoleBadge from '../RoleBadge';
 import ProfileHoverCard from '../ProfileHoverCard';
 import { useForumContext } from '@/context/ForumContext';
+import { getUserAvatar } from '@/lib/avatar';
 import { 
   getRankColorCompact, 
   getRankIconCompact, 
@@ -22,8 +23,8 @@ const PostAuthorSidebar = memo(({ author, isOP, currentUserId }: PostAuthorSideb
   const navigate = useNavigate();
   const { getUserProfile } = useForumContext();
   
-  const authorProfile = getUserProfile(author.id);
-  const displayAvatar = authorProfile.avatar || author.avatar;
+  // Use avatar directly from author data - it's already loaded from forum_users table
+  const displayAvatar = author.avatar || getUserAvatar('', author.username);
 
   return (
     <div className="md:w-[200px] flex-shrink-0 bg-forum-bg/30 border-b md:border-b-0 md:border-r border-forum-border/20 p-4 flex flex-col items-center md:items-center">
