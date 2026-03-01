@@ -32,9 +32,17 @@ export default function ThreadHeader({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [bannerError, setBannerError] = useState(false);
 
+  // Check if banner is from Supabase Storage (which is broken)
+  const isSupabaseStorageBanner = thread.banner?.includes('supabase.co/storage');
+
   useEffect(() => {
     setBannerError(false);
-  }, [thread.banner]);
+    // Auto-hide Supabase Storage banners since they don't work
+    if (isSupabaseStorageBanner) {
+      console.warn('Supabase Storage banner detected (broken):', thread.banner);
+      setBannerError(true);
+    }
+  }, [thread.banner, isSupabaseStorageBanner]);
   
   // Check if current user is the thread author
   const isAuthor = currentUser.id === thread.author.id;
@@ -65,7 +73,12 @@ export default function ThreadHeader({
           <div className="relative h-48 overflow-hidden bg-gradient-to-br from-forum-card via-forum-bg to-forum-card border-b border-forum-border/30">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center text-forum-muted/40">
-                <div className="text-[10px] font-mono">Banner unavailable</div>
+                <div className="text-[10px] font-mono mb-1">Banner unavailable</div>
+                {isAuthor && isSupabaseStorageBanner && (
+                  <div className="text-[9px] font-mono text-forum-pink/60">
+                    Click "Edit" to upload a new banner
+                  </div>
+                )}
               </div>
             </div>
           </div>
