@@ -229,11 +229,11 @@ export function useForumUser() {
 
     // Update user profile (avatar/banner)
     const updateUserProfile = useCallback(async (userId: string, updates: { avatar?: string; banner?: string }) => {
-        if (!isAuthenticated || !currentUser?.id) {
+        if (!isAuthenticated || !authUserId) {
             console.warn('[useForumUser] Cannot update profile: user not authenticated');
             return;
         }
-        if (userId !== currentUser.id) {
+        if (userId !== authUserId) {
             console.warn('[useForumUser] Cannot update profile: can only update own profile');
             return;
         }
@@ -257,18 +257,21 @@ export function useForumUser() {
                 console.error('[useForumUser] Failed to save profile:', error);
             } else {
                 console.log('[useForumUser] Profile saved successfully');
-                if (forumUser && forumUser.id === userId) {
-                    setForumUser({
-                        ...forumUser,
-                        avatar: updates.avatar !== undefined ? (updates.avatar || forumUser.avatar) : forumUser.avatar,
-                        banner: updates.banner !== undefined ? (updates.banner || forumUser.banner) : forumUser.banner,
-                    });
-                }
+                setForumUser(prev => {
+                    if (prev && prev.id === userId) {
+                        return {
+                            ...prev,
+                            avatar: updates.avatar !== undefined ? (updates.avatar || prev.avatar) : prev.avatar,
+                            banner: updates.banner !== undefined ? (updates.banner || prev.banner) : prev.banner,
+                        };
+                    }
+                    return prev;
+                });
             }
         } catch (err) {
             console.error('[useForumUser] Error persisting profile:', err);
         }
-    }, [isAuthenticated, currentUser, forumUser]);
+    }, [isAuthenticated, authUserId]);
 
     const getUserProfile = useCallback((userId: string): { avatar?: string; banner?: string } => {
         return profileCustomizations[userId] || {};
@@ -278,13 +281,13 @@ export function useForumUser() {
         if (AVAILABLE_PAGE_SIZES.includes(size)) {
             setPageSizeState(size);
 
-            if (isAuthenticated && currentUser?.id) {
+            if (isAuthenticated && authUserId) {
                 (async () => {
                     try {
                         const { error } = await supabase
                             .from('profile_customizations')
                             .upsert(
-                                { user_id: currentUser.id, page_size: size, updated_at: new Date().toISOString() },
+                                { user_id: authUserId, page_size: size, updated_at: new Date().toISOString() },
                                 { onConflict: 'user_id' }
                             );
                         if (error) console.warn('Failed to save page size to Supabase:', error.message);
@@ -294,7 +297,7 @@ export function useForumUser() {
                 })();
             }
         }
-    }, [isAuthenticated, currentUser?.id]);
+    }, [isAuthenticated, authUserId]);
 
     return {
         currentUser,
