@@ -177,6 +177,22 @@ export function useRealtime({
                     if (authUserId && updatedUser.id === authUserId) {
                         setForumUser((prev) => {
                             if (!prev) return prev;
+                            
+                            // Check if anything actually changed
+                            const hasChanges =
+                                prev.username !== updatedUser.username ||
+                                prev.avatar !== updatedUser.avatar ||
+                                prev.banner !== updatedUser.banner ||
+                                prev.postCount !== updatedUser.post_count ||
+                                prev.reputation !== updatedUser.reputation ||
+                                prev.isOnline !== updatedUser.is_online ||
+                                prev.rank !== updatedUser.rank ||
+                                prev.role !== ((updatedUser.role as UserRole) || prev.role);
+                            
+                            if (!hasChanges) {
+                                return prev; // No changes, return same reference
+                            }
+                            
                             return {
                                 ...prev,
                                 username: updatedUser.username,
