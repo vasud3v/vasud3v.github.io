@@ -24,7 +24,7 @@ interface NewThreadModalProps {
 
 export default function NewThreadModalAdvanced({ isOpen, onClose, defaultCategoryId }: NewThreadModalProps) {
   const navigate = useNavigate();
-  const { categories, createThread, getAllThreads } = useForumContext();
+  const { categories, createThread, getAllThreads, currentUser } = useForumContext();
   
   // Form state
   const [title, setTitle] = useState('');
@@ -176,7 +176,12 @@ export default function NewThreadModalAdvanced({ isOpen, onClose, defaultCategor
       return;
     }
     
-    if (cat.isImportant) {
+    // Check if category is important and user is not staff
+    const isStaff = currentUser?.role === 'admin' || 
+                   currentUser?.role === 'super_moderator' || 
+                   currentUser?.role === 'moderator';
+    
+    if (cat.isImportant && !isStaff) {
       setErrors({ category: 'This category is for moderators only' });
       return;
     }

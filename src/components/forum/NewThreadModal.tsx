@@ -24,7 +24,7 @@ interface NewThreadModalProps {
 
 export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: NewThreadModalProps) {
   const navigate = useNavigate();
-  const { categories, createThread } = useForumContext();
+  const { categories, createThread, currentUser } = useForumContext();
   
   // All useState hooks MUST come first
   const [title, setTitle] = useState('');
@@ -52,13 +52,36 @@ export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: N
   // Debug: Log categories to check if topics are loaded (development only)
   useEffect(() => {
     if (isOpen && import.meta.env.DEV) {
+      console.log('[NewThreadModal] Modal opened');
       console.log('[NewThreadModal] Categories:', categories);
+      console.log('[NewThreadModal] Categories length:', categories?.length);
+      console.log('[NewThreadModal] Current user:', currentUser);
+      console.log('[NewThreadModal] Current user role:', currentUser?.role);
+      console.log('[NewThreadModal] Categories detail:', categories.map(c => ({
+        id: c.id,
+        name: c.name,
+        isImportant: c.isImportant,
+        isSticky: c.isSticky
+      })));
+      
+      const isStaff = currentUser?.role === 'admin' || 
+                     currentUser?.role === 'super_moderator' || 
+                     currentUser?.role === 'moderator';
+      console.log('[NewThreadModal] Is staff user?:', isStaff);
+      
+      console.log('[NewThreadModal] Filtered categories:', 
+        categories.filter((cat) => {
+          const isStaff = currentUser?.role === 'admin' || 
+                         currentUser?.role === 'super_moderator' || 
+                         currentUser?.role === 'moderator';
+          return isStaff || !cat.isImportant;
+        }).map(c => c.name));
       console.log('[NewThreadModal] Selected category:', selectedCategory);
       const cat = categories.find(c => c.id === selectedCategory);
       console.log('[NewThreadModal] Selected category data:', cat);
       console.log('[NewThreadModal] Topics for selected category:', cat?.topics);
     }
-  }, [isOpen, categories, selectedCategory]);
+  }, [isOpen, categories, selectedCategory, currentUser]);
 
   const handleSubmit = async () => {
     // Clear previous errors
@@ -83,7 +106,12 @@ export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: N
       return;
     }
     
-    if (cat.isImportant) {
+    // Check if category is important and user is not staff
+    const isStaff = currentUser?.role === 'admin' || 
+                   currentUser?.role === 'super_moderator' || 
+                   currentUser?.role === 'moderator';
+    
+    if (cat.isImportant && !isStaff) {
       setErrors({ category: 'This category is for moderators only' });
       return;
     }
@@ -276,14 +304,36 @@ export default function NewThreadModal({ isOpen, onClose, defaultCategoryId }: N
                 }`}
             >
               <option value="" className="bg-forum-card">Select a category...</option>
-              {categories
-                .filter((cat) => !cat.isImportant)
-                .map((cat) => (
-                  <option key={cat.id} value={cat.id} className="bg-forum-card">
-                    {cat.name}
-                  </option>
-                ))}
+              {categories && categories.length > 0 ? (
+                categories
+                  .filter((cat) => {
+                    // Show all categories for admin/moderator users
+                    const isStaff = currentUser?.role === 'admin' || 
+                                   currentUser?.role === 'super_moderator' || 
+                                   currentUser?.role === 'moderator';
+                    const shouldShow = isStaff || !cat.isImportant;
+                    console.log(`[NewThreadModal] Category ${cat.name}: isImportant=${cat.isImportant}, isStaff=${isStaff}, shouldShow=${shouldShow}`);
+                    return shouldShow;
+                  })
+                  .map((cat) => {
+                    console.log(`[NewThreadModal] Rendering option for: ${cat.name}`);
+                    return (
+                      <option key={cat.id} value={cat.id} className="bg-forum-card">
+                        {cat.name} {cat.isImportant ? '(Important)' : ''}
+                      </option>
+                    );
+                  })
+              ) : (
+                <option value="" disabled className="bg-forum-card text-forum-muted">
+                  Loading categories...
+                </option>
+              )}
             </select>
+            {!categories || categories.length === 0 ? (
+              <p className="mt-1 text-[10px] text-orange-400 font-mono flex items-center gap-1">
+                <AlertCircle size={10} /> No categories available. Categories may still be loading.
+              </p>
+            ) : null}
             {errors.category && (
               <p className="mt-1 text-[10px] text-red-400 font-mono flex items-center gap-1">
                 <AlertCircle size={10} /> {errors.category}
