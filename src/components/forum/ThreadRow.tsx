@@ -52,24 +52,18 @@ export default function ThreadRow({ thread }: ThreadRowProps) {
       )}
 
       <div className="flex items-center gap-3 px-3 py-2.5">
-        {/* Thread Banner/Thumbnail - 75x50 */}
+        {/* Thread Thumbnail - 75x50 */}
         <div className="relative flex-shrink-0">
           <img
-            src={thread.banner || thread.thumbnail || displayAvatar}
+            src={thread.thumbnail || displayAvatar}
             alt={thread.title}
             className="w-[75px] h-[50px] rounded object-cover border border-forum-border/40"
             style={{
               backgroundColor: '#1a1a1a'
             }}
             onError={(e) => {
-              // Fallback chain: banner -> thumbnail -> avatar
-              if (e.currentTarget.src === thread.banner && thread.thumbnail) {
-                e.currentTarget.src = thread.thumbnail;
-              } else if (thread.thumbnail && e.currentTarget.src === thread.thumbnail) {
-                e.currentTarget.src = displayAvatar;
-              } else {
-                e.currentTarget.src = displayAvatar;
-              }
+              // Fallback to avatar if thumbnail fails
+              e.currentTarget.src = displayAvatar;
             }}
           />
           {thread.hasUnread && (
