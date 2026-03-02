@@ -21,6 +21,13 @@ module.exports = {
   			mono: ['Fira Code', 'monospace'],
   			sans: ['Inter', 'system-ui', 'sans-serif'],
   		},
+  		zIndex: {
+  			'header': '1000',
+  			'dropdown': '1100',
+  			'modal': '1200',
+  			'mobile-nav': '900',
+  			'toast': '1300',
+  		},
   		colors: {
   			border: 'rgba(255, 45, 146, 0.15)',
   			input: 'rgba(255, 45, 146, 0.15)',

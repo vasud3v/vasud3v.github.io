@@ -101,6 +101,125 @@
     border-radius: 4px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
   }
+
+  /* Z-index hierarchy */
+  .z-header {
+    z-index: 1000;
+  }
+
+  .z-dropdown {
+    z-index: 1100;
+  }
+
+  .z-modal {
+    z-index: 1200;
+  }
+
+  .z-mobile-nav {
+    z-index: 900;
+  }
+
+  .z-toast {
+    z-index: 1300;
+  }
+
+  /* Search page enhancements */
+  .search-result-card {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .search-result-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 45, 146, 0.05),
+      transparent
+    );
+    transition: left 0.5s ease;
+  }
+
+  .search-result-card:hover::before {
+    left: 100%;
+  }
+
+  /* Search input focus glow */
+  .search-input-glow:focus {
+    box-shadow: 0 0 0 3px rgba(255, 45, 146, 0.1),
+                0 0 20px rgba(255, 45, 146, 0.2);
+  }
+
+  /* Highlight mark animation */
+  mark {
+    animation: highlight-fade-in 0.3s ease-out;
+  }
+
+  @keyframes highlight-fade-in {
+    from {
+      background-color: transparent;
+    }
+    to {
+      background-color: rgba(255, 45, 146, 0.2);
+    }
+  }
+
+  /* Recent search tag hover effect */
+  .recent-search-tag {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .recent-search-tag::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 45, 146, 0.1);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+  }
+
+  .recent-search-tag:hover::after {
+    width: 200%;
+    height: 200%;
+  }
+
+  /* Loading spinner enhancement */
+  @keyframes spin-glow {
+    0% {
+      transform: rotate(0deg);
+      filter: drop-shadow(0 0 2px rgba(255, 45, 146, 0.5));
+    }
+    50% {
+      filter: drop-shadow(0 0 8px rgba(255, 45, 146, 0.8));
+    }
+    100% {
+      transform: rotate(360deg);
+      filter: drop-shadow(0 0 2px rgba(255, 45, 146, 0.5));
+    }
+  }
+
+  .spinner-glow {
+    animation: spin-glow 1s linear infinite;
+  }
+
+  /* Prevent content from going under fixed elements */
+  .content-with-header {
+    padding-top: calc(56px + 40px); /* header height + nav height */
+  }
+
+  .content-with-mobile-nav {
+    padding-bottom: 56px; /* mobile nav height */
+  }
 }
 
 /* Custom scrollbar */

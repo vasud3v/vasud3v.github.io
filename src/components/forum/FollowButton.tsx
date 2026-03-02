@@ -1,16 +1,25 @@
 import { Button } from '@/components/ui/button';
-import { UserPlus, UserMinus, Clock, MessageCircle } from 'lucide-react';
-import { useFollowSystem } from '@/hooks/useFollowSystem';
+import { UserPlus, UserMinus, Clock, MessageCircle, Ban, Users } from 'lucide-react';
+import { useFollowSystemEnhanced } from '@/hooks/useFollowSystemEnhanced';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/context/NotificationContext';
 import { useAuth } from '@/context/AuthContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreVertical } from 'lucide-react';
 
 interface FollowButtonProps {
   targetUserId: string;
   currentUserId: string;
   showMessageButton?: boolean;
+  showBlockButton?: boolean;
+  showMutualFollowers?: boolean;
   onMessageClick?: () => void;
 }
 
@@ -18,6 +27,8 @@ export function FollowButton({
   targetUserId, 
   currentUserId, 
   showMessageButton = false,
+  showBlockButton = false,
+  showMutualFollowers = false,
   onMessageClick 
 }: FollowButtonProps) {
   const navigate = useNavigate();
@@ -25,7 +36,6 @@ export function FollowButton({
   const { user } = useAuth();
   const [currentUserData, setCurrentUserData] = useState<{ username: string; avatar: string } | null>(null);
 
-  // Fetch current user data for notifications
   useEffect(() => {
     if (user?.id) {
       supabase
@@ -41,7 +51,16 @@ export function FollowButton({
     }
   }, [user?.id]);
 
-  const { followStatus, loading, followUser, unfollowUser } = useFollowSystem(
+  const { 
+    followStatus, 
+    mutualFollowers,
+    loading, 
+    blockLoading,
+    followUser, 
+    unfollowUser,
+    blockUser,
+    unblockUser
+  } = useFollowSystemEnhanced(
     targetUserId,
     currentUserId,
     createNotification,
@@ -59,17 +78,33 @@ export function FollowButton({
     }
   };
 
+  const isBlocked = followStatus.isBlocked || followStatus.hasBlockedYou;
+
   return (
-    <div className="flex gap-2">
-      {followStatus.isFollowing ? (
+    <div className="flex gap-2 items-center">
+      {followStatus.hasBlockedYou ? (
+        <Button disabled variant="outline" size="sm">
+          <Ban className="w-4 h-4 mr-2" />
+          Blocked You
+        </Button>
+      ) : followStatus.isBlocked ? (
+        <Button
+          onClick={unblockUser}
+          disabled={blockLoading}
+          variant="outline"
+          size="sm"
+        >
+          <Ban className="w-4 h-4 mr-2" />
+          Unblock
+        </Button>
+      ) : followStatus.isFollowing ? (
         <Button
           onClick={unfollowUser}
           disabled={loading}
           variant="outline"
           size="sm"
-          className="gap-2"
         >
-          <UserMinus className="w-4 h-4" />
+          <UserMinus className="w-4 h-4 mr-2" />
           Unfollow
         </Button>
       ) : followStatus.isPending ? (
@@ -78,9 +113,8 @@ export function FollowButton({
           disabled={loading}
           variant="outline"
           size="sm"
-          className="gap-2"
         >
-          <Clock className="w-4 h-4" />
+          <Clock className="w-4 h-4 mr-2" />
           Pending
         </Button>
       ) : (
@@ -88,23 +122,50 @@ export function FollowButton({
           onClick={followUser}
           disabled={loading}
           size="sm"
-          className="gap-2"
         >
-          <UserPlus className="w-4 h-4" />
+          <UserPlus className="w-4 h-4 mr-2" />
           Follow
         </Button>
       )}
 
-      {showMessageButton && followStatus.isFollowing && (
+      {showMessageButton && followStatus.isFollowing && !isBlocked && (
         <Button
           onClick={handleMessageClick}
           variant="outline"
           size="sm"
-          className="gap-2"
         >
-          <MessageCircle className="w-4 h-4" />
+          <MessageCircle className="w-4 h-4 mr-2" />
           Message
         </Button>
+      )}
+
+      {showMutualFollowers && mutualFollowers.length > 0 && (
+        <div className="text-sm text-muted-foreground flex items-center gap-1">
+          <Users className="w-4 h-4" />
+          {mutualFollowers.length} mutual
+        </div>
+      )}
+
+      {showBlockButton && !followStatus.hasBlockedYou && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {!followStatus.isBlocked && (
+              <DropdownMenuItem
+                onClick={blockUser}
+                disabled={blockLoading}
+                className="text-destructive"
+              >
+                <Ban className="w-4 h-4 mr-2" />
+                Block User
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </div>
   );

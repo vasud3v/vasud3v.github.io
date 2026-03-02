@@ -98,7 +98,7 @@ export default function ForumHeader({
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full">
+    <header className="sticky top-0 z-header w-full">
       {/* Top bar */}
       <div className="border-b border-forum-border bg-forum-card/95 backdrop-blur-md shadow-card">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">

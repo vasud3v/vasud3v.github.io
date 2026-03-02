@@ -51,7 +51,7 @@ export default function MobileBottomNav() {
 
     return (
         <>
-            <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t border-forum-border bg-forum-card/95 backdrop-blur-md">
+            <nav className="fixed bottom-0 left-0 right-0 z-mobile-nav lg:hidden border-t border-forum-border bg-forum-card/95 backdrop-blur-md">
                 <div className="flex items-center justify-around h-14 px-2">
                     {navItems.map((item) => (
                         <button
